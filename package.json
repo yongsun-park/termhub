@@ -3,8 +3,9 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --filter @aily/server dev & pnpm --filter @aily/web dev & wait",
-    "build": "pnpm --filter @aily/server build && pnpm --filter @aily/web build",
-    "start": "pnpm --filter @aily/server start"
+    "build": "pnpm --filter @aily/server build && pnpm --filter @aily/web build && pnpm --filter @aily/cli build",
+    "start": "pnpm --filter @aily/server start",
+    "test": "pnpm --filter @aily/server test && pnpm --filter @aily/cli test"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

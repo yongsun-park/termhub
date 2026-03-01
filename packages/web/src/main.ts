@@ -1,6 +1,6 @@
 import { createTerminal, type TerminalHandle } from "./terminal.js";
 import { TabBar, type SessionInfo } from "./tab-bar.js";
-import { SidePanel, type SessionCardInfo, type TmuxSessionCardInfo } from "./side-panel.js";
+import { SidePanel, type SessionCardInfo, type TmuxSessionCardInfo, type SessionPreset } from "./side-panel.js";
 import { ToastManager } from "./toast.js";
 import { NotificationManager } from "./notifications.js";
 import "@xterm/xterm/css/xterm.css";
@@ -57,6 +57,7 @@ const tabBar = new TabBar(tabBarEl, {
 const sidePanel = new SidePanel(sidePanelEl, panelToggleBtn, {
   onSelectSession: (id) => switchSession(id),
   onAttachTmux: (name) => attachTmuxSession(name),
+  onCreatePreset: (preset) => createPresetSession(preset),
 });
 
 // --- WebSocket ---
@@ -148,6 +149,46 @@ function connectWs(): void {
 function wsSend(msg: Record<string, unknown>): void {
   if (ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(msg));
+  }
+}
+
+// --- Preset configs ---
+const PRESET_COMMANDS: Record<SessionPreset, { name: string; command?: string }> = {
+  claude: { name: "Claude Code", command: "claude" },
+  codex: { name: "Codex", command: "codex" },
+  shell: { name: "Shell" },
+};
+
+async function createPresetSession(preset: SessionPreset): Promise<void> {
+  const config = PRESET_COMMANDS[preset];
+  const session = await api<SessionInfo>("/api/sessions", {
+    method: "POST",
+    body: JSON.stringify({ name: config.name, preset }),
+  });
+  const handle = createTerminal();
+  terminalHandles.set(session.id, handle);
+
+  handle.terminal.onData((data) => {
+    wsSend({ type: "input", data });
+  });
+  handle.terminal.onResize(({ cols, rows }) => {
+    wsSend({ type: "resize", cols, rows });
+  });
+
+  tabBar.addTab(session);
+  switchSession(session.id);
+  refreshSidePanel();
+
+  // Auto-run CLI command after a short delay for shell init
+  if (config.command) {
+    const targetId = session.id;
+    const cmd = config.command;
+    setTimeout(() => {
+      api("/api/sessions/" + targetId + "/write", {
+        method: "POST",
+        body: JSON.stringify({ data: cmd + "\n" }),
+      }).catch(() => {});
+    }, 500);
   }
 }
 

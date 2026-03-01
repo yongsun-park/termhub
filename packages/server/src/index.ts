@@ -8,6 +8,8 @@ import { SessionManager } from "./session-manager.js";
 import { login, authMiddleware } from "./auth.js";
 import { handleWebSocket } from "./websocket.js";
 import { listTmuxSessions, tmuxSessionExists } from "./tmux.js";
+import { createExecHandler } from "./exec.js";
+import { createStreamHandler } from "./sse.js";
 
 const PORT = parseInt(process.env.PORT || "4000", 10);
 const app = express();
@@ -81,6 +83,49 @@ app.get("/api/tmux-sessions", authMiddleware, async (_req, res) => {
     ailyAttached: attachedNames.has(ts.name),
   }));
   res.json(enriched);
+});
+
+// --- Exec & Stream API ---
+app.post("/api/sessions/:id/exec", authMiddleware, createExecHandler(sessionManager));
+app.get("/api/sessions/:id/stream", authMiddleware, createStreamHandler(sessionManager));
+
+// --- Write API (raw text to session) ---
+app.post("/api/sessions/:id/write", authMiddleware, (req, res) => {
+  const id = req.params.id;
+  const session = sessionManager.get(id);
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  if (!session.isAlive()) {
+    res.status(410).json({ error: "Session is dead" });
+    return;
+  }
+  const { data } = req.body || {};
+  if (typeof data !== "string") {
+    res.status(400).json({ error: "data (string) is required" });
+    return;
+  }
+  session.write(data);
+  res.json({ ok: true });
+});
+
+// --- Output API (get session output buffer) ---
+app.get("/api/sessions/:id/output", authMiddleware, (req, res) => {
+  const id = req.params.id;
+  const session = sessionManager.get(id);
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  const snapshot = session.getSnapshot();
+  const lastN = parseInt(req.query.last as string, 10);
+  if (lastN > 0) {
+    const lines = snapshot.split("\n");
+    res.json({ output: lines.slice(-lastN).join("\n") });
+    return;
+  }
+  res.json({ output: snapshot });
 });
 
 // SPA fallback

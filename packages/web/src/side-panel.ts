@@ -16,9 +16,12 @@ export interface TmuxSessionCardInfo {
   ailyAttached: boolean;
 }
 
+export type SessionPreset = "shell" | "claude" | "codex";
+
 export interface SidePanelCallbacks {
   onSelectSession(sessionId: string): void;
   onAttachTmux(sessionName: string): void;
+  onCreatePreset(preset: SessionPreset): void;
 }
 
 export class SidePanel {
@@ -41,6 +44,31 @@ export class SidePanel {
     this.container = container;
     this.toggleBtn = toggleBtn;
     this.callbacks = callbacks;
+
+    // Quick Launch section
+    const launchHeader = document.createElement("div");
+    launchHeader.className = "side-panel-header";
+    launchHeader.textContent = "Quick Launch";
+    this.container.appendChild(launchHeader);
+
+    const launchGrid = document.createElement("div");
+    launchGrid.className = "quick-launch-grid";
+
+    const presets: { preset: SessionPreset; label: string; icon: string }[] = [
+      { preset: "claude", label: "Claude Code", icon: "C" },
+      { preset: "codex", label: "Codex", icon: "X" },
+      { preset: "shell", label: "Shell", icon: "$" },
+    ];
+
+    for (const { preset, label, icon } of presets) {
+      const btn = document.createElement("button");
+      btn.className = `quick-launch-btn preset-${preset}`;
+      btn.innerHTML = `<span class="quick-launch-icon">${icon}</span><span class="quick-launch-label">${label}</span>`;
+      btn.addEventListener("click", () => this.callbacks.onCreatePreset(preset));
+      launchGrid.appendChild(btn);
+    }
+
+    this.container.appendChild(launchGrid);
 
     // Aily Sessions section
     const ailyHeader = document.createElement("div");

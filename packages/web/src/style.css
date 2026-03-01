@@ -262,6 +262,71 @@ html, body {
   border-radius: 2px;
 }
 
+/* Quick Launch */
+.quick-launch-grid {
+  display: flex;
+  gap: 6px;
+  padding: 0 8px 8px;
+  flex-shrink: 0;
+}
+
+.quick-launch-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  background: #1a1b26;
+  border: 1px solid #1e2030;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  color: #a9b1d6;
+}
+
+.quick-launch-btn:hover {
+  border-color: #414868;
+  background: #24283b;
+}
+
+.quick-launch-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.preset-claude .quick-launch-icon {
+  background: #bb9af720;
+  color: #bb9af7;
+}
+
+.preset-codex .quick-launch-icon {
+  background: #9ece6a20;
+  color: #9ece6a;
+}
+
+.preset-shell .quick-launch-icon {
+  background: #7aa2f720;
+  color: #7aa2f7;
+}
+
+.quick-launch-label {
+  font-size: 10px;
+  color: #565f89;
+  white-space: nowrap;
+}
+
+.quick-launch-btn:hover .quick-launch-label {
+  color: #a9b1d6;
+}
+
 /* Session Card */
 .session-card {
   padding: 10px 12px;
