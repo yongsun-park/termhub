@@ -37,6 +37,19 @@ export function handleWebSocket(
     return;
   }
 
+  // Subscribe to alerts for ALL sessions
+  const cleanupAlert = sessionManager.onAlert((alert) => {
+    send(ws, {
+      type: "alert",
+      sessionId: alert.sessionId,
+      alertId: alert.id,
+      severity: alert.severity,
+      category: alert.category,
+      message: alert.message,
+      timestamp: alert.timestamp,
+    });
+  });
+
   let attachedSessionId: string | null = null;
   let cleanupData: (() => void) | null = null;
   let cleanupExit: (() => void) | null = null;
@@ -106,5 +119,6 @@ export function handleWebSocket(
 
   ws.on("close", () => {
     detach();
+    cleanupAlert();
   });
 }

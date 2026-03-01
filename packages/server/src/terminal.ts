@@ -2,6 +2,11 @@ import * as pty from "node-pty";
 
 const OUTPUT_BUFFER_MAX = 100_000;
 
+export interface TerminalSessionOptions {
+  cwd?: string;
+  tmuxSession?: string;
+}
+
 export interface TerminalSessionInfo {
   id: string;
   name: string;
@@ -9,12 +14,14 @@ export interface TerminalSessionInfo {
   cwd: string;
   createdAt: string;
   alive: boolean;
+  tmuxSession?: string;
 }
 
 export class TerminalSession {
   readonly id: string;
   readonly name: string;
   readonly createdAt: Date;
+  readonly tmuxSession?: string;
   private readonly initialCwd: string;
   private ptyProcess: pty.IPty;
   private outputBuffer: string = "";
@@ -22,14 +29,25 @@ export class TerminalSession {
   private listeners: Set<(data: string) => void> = new Set();
   private exitListeners: Set<(code: number) => void> = new Set();
 
-  constructor(id: string, name: string, cwd?: string) {
+  constructor(id: string, name: string, options?: TerminalSessionOptions) {
     this.id = id;
     this.name = name;
     this.createdAt = new Date();
-    this.initialCwd = cwd || process.env.HOME || "/";
+    this.initialCwd = options?.cwd || process.env.HOME || "/";
+    this.tmuxSession = options?.tmuxSession;
 
-    const shell = process.env.SHELL || "bash";
-    this.ptyProcess = pty.spawn(shell, [], {
+    let command: string;
+    let args: string[];
+
+    if (this.tmuxSession) {
+      command = "tmux";
+      args = ["attach", "-t", this.tmuxSession];
+    } else {
+      command = process.env.SHELL || "bash";
+      args = [];
+    }
+
+    this.ptyProcess = pty.spawn(command, args, {
       name: "xterm-256color",
       cols: 80,
       rows: 24,
@@ -97,11 +115,14 @@ export class TerminalSession {
       cwd: this.initialCwd,
       createdAt: this.createdAt.toISOString(),
       alive: this.alive,
+      tmuxSession: this.tmuxSession,
     };
   }
 
   destroy(): void {
     if (this.alive) {
+      // For tmux sessions, killing the PTY process (tmux attach) causes
+      // tmux to detach only this client, leaving the session alive.
       this.ptyProcess.kill();
       this.alive = false;
     }

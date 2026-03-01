@@ -7,6 +7,7 @@ import path from "node:path";
 import { SessionManager } from "./session-manager.js";
 import { login, authMiddleware } from "./auth.js";
 import { handleWebSocket } from "./websocket.js";
+import { listTmuxSessions, tmuxSessionExists } from "./tmux.js";
 
 const PORT = parseInt(process.env.PORT || "4000", 10);
 const app = express();
@@ -22,7 +23,7 @@ const sessionManager = new SessionManager();
 
 // --- Auth ---
 app.post("/api/login", (req, res) => {
-  const { password } = req.body;
+  const { password } = req.body || {};
   if (!password) {
     res.status(400).json({ error: "Password required" });
     return;
@@ -40,10 +41,23 @@ app.get("/api/sessions", authMiddleware, (_req, res) => {
   res.json(sessionManager.list());
 });
 
-app.post("/api/sessions", authMiddleware, (req, res) => {
-  const { name, cwd } = req.body || {};
-  const session = sessionManager.create(name, cwd);
-  res.status(201).json(session.getInfo());
+app.post("/api/sessions", authMiddleware, async (req, res) => {
+  const { name, cwd, tmuxSession } = req.body || {};
+
+  if (tmuxSession) {
+    const exists = await tmuxSessionExists(tmuxSession);
+    if (!exists) {
+      res.status(404).json({ error: `tmux session '${tmuxSession}' not found` });
+      return;
+    }
+  }
+
+  try {
+    const session = sessionManager.create(name, { cwd, tmuxSession });
+    res.status(201).json(session.getInfo());
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to create session" });
+  }
 });
 
 app.delete("/api/sessions/:id", authMiddleware, (req, res) => {
@@ -54,6 +68,19 @@ app.delete("/api/sessions/:id", authMiddleware, (req, res) => {
     return;
   }
   res.json({ ok: true });
+});
+
+app.get("/api/tmux-sessions", authMiddleware, async (_req, res) => {
+  const tmuxSessions = await listTmuxSessions();
+  const ailySessions = sessionManager.list();
+  const attachedNames = new Set(
+    ailySessions.filter((s) => s.tmuxSession).map((s) => s.tmuxSession!)
+  );
+  const enriched = tmuxSessions.map((ts) => ({
+    ...ts,
+    ailyAttached: attachedNames.has(ts.name),
+  }));
+  res.json(enriched);
 });
 
 // SPA fallback
@@ -81,11 +108,12 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on("SIGTERM", () => {
+function shutdown(): void {
   sessionManager.destroyAll();
+  for (const client of wss.clients) {
+    client.close(1001, "Server shutting down");
+  }
   server.close();
-});
-process.on("SIGINT", () => {
-  sessionManager.destroyAll();
-  server.close();
-});
+}
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);

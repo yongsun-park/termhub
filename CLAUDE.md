@@ -26,3 +26,7 @@ pnpm start          # 프로덕션 실행
 - ESM (import/export)
 - 환경변수는 `.env` 파일 사용 (`.env.example` 참고)
 - 커밋 메시지: 한글 또는 영문, 간결하게
+
+## 작업 규칙
+- 플랜 또는 구현 완료 시, `codex review --uncommitted`로 코드 리뷰를 받고 critical/high 이슈를 수정할 것
+- 작업 마무리 시, `docs/plans/`에 작업 기록 문서를 작성하고 메모리 문서를 업데이트할 것

@@ -2,6 +2,7 @@ export interface SessionInfo {
   id: string;
   name: string;
   alive: boolean;
+  tmuxSession?: string;
 }
 
 export interface TabBarCallbacks {
@@ -10,11 +11,18 @@ export interface TabBarCallbacks {
   onClose(sessionId: string): void;
 }
 
+type Severity = "error" | "warning" | "info";
+
+function severityRank(s: string): number {
+  return s === "error" ? 3 : s === "warning" ? 2 : 1;
+}
+
 export class TabBar {
   private container: HTMLElement;
   private tabs: SessionInfo[] = [];
   private activeId: string | null = null;
   private callbacks: TabBarCallbacks;
+  private badges = new Map<string, { count: number; severity: Severity }>();
 
   constructor(container: HTMLElement, callbacks: TabBarCallbacks) {
     this.container = container;
@@ -41,14 +49,42 @@ export class TabBar {
 
   removeTab(id: string): void {
     this.tabs = this.tabs.filter((t) => t.id !== id);
+    this.badges.delete(id);
     if (this.activeId === id) {
       this.activeId = this.tabs.length > 0 ? this.tabs[this.tabs.length - 1].id : null;
     }
     this.render();
   }
 
+  addBadge(sessionId: string, severity: Severity): void {
+    const existing = this.badges.get(sessionId);
+    if (existing) {
+      existing.count++;
+      if (severityRank(severity) > severityRank(existing.severity)) {
+        existing.severity = severity;
+      }
+    } else {
+      this.badges.set(sessionId, { count: 1, severity });
+    }
+    this.render();
+  }
+
+  clearBadge(sessionId: string): void {
+    if (this.badges.has(sessionId)) {
+      this.badges.delete(sessionId);
+      this.render();
+    }
+  }
+
+  getSessionName(sessionId: string): string | undefined {
+    return this.tabs.find((t) => t.id === sessionId)?.name;
+  }
+
   private render(): void {
+    // Preserve the panel toggle button if it exists
+    const toggleBtn = this.container.querySelector("#panel-toggle");
     this.container.innerHTML = "";
+    if (toggleBtn) this.container.appendChild(toggleBtn);
 
     for (const tab of this.tabs) {
       const el = document.createElement("div");
@@ -57,8 +93,17 @@ export class TabBar {
 
       const nameSpan = document.createElement("span");
       nameSpan.className = "tab-name";
-      nameSpan.textContent = tab.name;
+      nameSpan.textContent = tab.tmuxSession ? `[T] ${tab.name}` : tab.name;
       el.appendChild(nameSpan);
+
+      // Badge (only for non-active tabs)
+      const badge = this.badges.get(tab.id);
+      if (badge && tab.id !== this.activeId) {
+        const badgeEl = document.createElement("span");
+        badgeEl.className = `tab-badge tab-badge-${badge.severity}`;
+        badgeEl.textContent = badge.count > 99 ? "99+" : String(badge.count);
+        el.appendChild(badgeEl);
+      }
 
       const closeBtn = document.createElement("button");
       closeBtn.className = "tab-close";
@@ -87,13 +132,11 @@ export class TabBar {
 
   private setupKeyboardShortcuts(): void {
     document.addEventListener("keydown", (e) => {
-      // Ctrl+T: new tab
       if (e.ctrlKey && e.key === "t") {
         e.preventDefault();
         this.callbacks.onCreate();
         return;
       }
-      // Ctrl+W: close tab
       if (e.ctrlKey && e.key === "w") {
         e.preventDefault();
         if (this.activeId) {
@@ -101,7 +144,6 @@ export class TabBar {
         }
         return;
       }
-      // Ctrl+Tab: next tab
       if (e.ctrlKey && e.key === "Tab") {
         e.preventDefault();
         if (this.tabs.length <= 1) return;
