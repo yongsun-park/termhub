@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aily</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+</head>
+<body>
+  <div id="login-screen">
+    <h1>AILY</h1>
+    <form id="login-form">
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
+      <button type="submit">Login</button>
+    </form>
+    <div id="login-error"></div>
+  </div>
+  <div id="app-screen">
+    <div id="tab-bar"></div>
+    <div id="terminal-container"></div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
