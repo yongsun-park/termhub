@@ -43,3 +43,27 @@ export async function tmuxSessionExists(sessionName: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Capture the rendered screen content of a tmux pane.
+ * Returns the visible text (no ANSI codes) — much more reliable
+ * than parsing the raw PTY output buffer for tmux sessions.
+ */
+export async function tmuxCapturePane(
+  sessionName: string,
+  scrollBack = 50,
+): Promise<string> {
+  try {
+    const { stdout } = await execFileAsync("tmux", [
+      "capture-pane",
+      "-t",
+      sessionName,
+      "-p",
+      "-S",
+      `-${scrollBack}`,
+    ]);
+    return stdout;
+  } catch {
+    return "";
+  }
+}

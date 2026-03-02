@@ -74,6 +74,18 @@ export class ApiClient {
     return this.request<unknown>("POST", "/api/sessions", { tmuxSession: name });
   }
 
+  async send(
+    id: string,
+    text: string,
+    opts?: { submit?: boolean; waitForIdle?: boolean; timeoutMs?: number; quietMs?: number },
+  ): Promise<{ output: string; state: string; sessionId: string; autoAttached: boolean; durationMs: number; timedOut: boolean }> {
+    return this.request("POST", `/api/sessions/${id}/send`, { text, ...opts });
+  }
+
+  async status(id: string): Promise<{ state: string; pattern?: string; sessionId: string; alive: boolean }> {
+    return this.request("GET", `/api/sessions/${id}/status`);
+  }
+
   streamUrl(id: string): string {
     return `${this.url}/api/sessions/${id}/stream`;
   }

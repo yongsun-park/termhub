@@ -7,9 +7,13 @@ import path from "node:path";
 import { SessionManager } from "./session-manager.js";
 import { login, authMiddleware } from "./auth.js";
 import { handleWebSocket } from "./websocket.js";
-import { listTmuxSessions, tmuxSessionExists } from "./tmux.js";
+import { listTmuxSessions, tmuxSessionExists, tmuxCapturePane } from "./tmux.js";
 import { createExecHandler } from "./exec.js";
 import { createStreamHandler } from "./sse.js";
+import { createSendHandler } from "./send.js";
+import { stripAnsi } from "./ansi.js";
+import { detectClaudeState } from "./claude-state.js";
+import { resolveSession, isResolveError } from "./resolve-session.js";
 
 const PORT = parseInt(process.env.PORT || "4000", 10);
 const app = express();
@@ -85,9 +89,33 @@ app.get("/api/tmux-sessions", authMiddleware, async (_req, res) => {
   res.json(enriched);
 });
 
-// --- Exec & Stream API ---
+// --- Exec, Send & Stream API ---
 app.post("/api/sessions/:id/exec", authMiddleware, createExecHandler(sessionManager));
+app.post("/api/sessions/:id/send", authMiddleware, createSendHandler(sessionManager));
 app.get("/api/sessions/:id/stream", authMiddleware, createStreamHandler(sessionManager));
+
+// --- Status API (Claude Code state detection) ---
+app.get("/api/sessions/:id/status", authMiddleware, async (req, res) => {
+  const result = await resolveSession(sessionManager, req.params.id);
+  if (isResolveError(result)) {
+    res.status(result.status).json({ error: result.error });
+    return;
+  }
+  const { session, id } = result;
+  // For tmux sessions, capture the rendered screen for accurate state detection
+  let cleaned: string;
+  if (session.tmuxSession) {
+    cleaned = await tmuxCapturePane(session.tmuxSession);
+  } else {
+    cleaned = stripAnsi(session.getSnapshot());
+  }
+  const stateResult = detectClaudeState(cleaned);
+  res.json({
+    ...stateResult,
+    sessionId: id,
+    alive: session.isAlive(),
+  });
+});
 
 // --- Write API (raw text to session) ---
 app.post("/api/sessions/:id/write", authMiddleware, (req, res) => {

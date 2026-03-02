@@ -61,9 +61,13 @@ export function handleWebSocket(
     cleanupExit = null;
   }
 
+  let suppressUntil = 0;
+
   function attachSession(sessionId: string): void {
     detach();
     attachedSessionId = sessionId;
+    // Suppress terminal escape sequences for 1s after attach
+    suppressUntil = Date.now() + 1000;
 
     const session = sessionManager.get(sessionId);
     if (!session) {
@@ -99,7 +103,16 @@ export function handleWebSocket(
         break;
       case "input": {
         if (attachedSessionId) {
-          sessionManager.get(attachedSessionId)?.write(msg.data);
+          let data = msg.data;
+          // Filter terminal escape sequences only during attach init window
+          if (Date.now() < suppressUntil) {
+            data = data.replace(/\x1b\[\??[\d;]*c/g, "")
+                       .replace(/\x1b\[>[\d;]*c/g, "")
+                       .replace(/\x1bP[^\\]*\x1b\\/g, "")
+                       .replace(/\d+;\d+;\d+c/g, "");
+            if (!data) break;
+          }
+          sessionManager.get(attachedSessionId)?.write(data);
         }
         break;
       }

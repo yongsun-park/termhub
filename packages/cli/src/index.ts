@@ -11,6 +11,8 @@ Commands:
   sessions create [--name NAME] [--cwd PATH]  Create a session
   sessions delete <id>           Delete a session
   exec <session-id> "command"    Execute a command in a session
+  send <id|tmux:name> "text"     Send prompt to Claude Code session
+  status <id|tmux:name>          Check Claude Code session state
   output <session-id> [--last N] Get session output
   write <session-id> "text"      Write raw text to a session
   tmux list                      List tmux sessions
@@ -43,6 +45,12 @@ async function main(): Promise<void> {
       break;
     case "exec":
       await cmdExec(args.slice(1));
+      break;
+    case "send":
+      await cmdSend(args.slice(1));
+      break;
+    case "status":
+      await cmdStatus(args.slice(1));
       break;
     case "output":
       await cmdOutput(args.slice(1));
@@ -167,6 +175,53 @@ async function cmdExec(args: string[]): Promise<void> {
   if (result.timedOut) {
     console.error("\n[timed out]");
   }
+}
+
+async function cmdSend(args: string[]): Promise<void> {
+  const { values, positionals } = parseArgs({
+    args,
+    options: {
+      "no-submit": { type: "boolean" },
+      "no-wait": { type: "boolean" },
+      "timeout": { type: "string" },
+      "quiet-ms": { type: "string" },
+    },
+    allowPositionals: true,
+  });
+
+  const target = positionals[0];
+  const text = positionals.slice(1).join(" ");
+
+  if (!target || !text) {
+    console.error('Usage: termhub send <id|tmux:name> "text"');
+    process.exit(1);
+  }
+
+  const client = new ApiClient();
+  const result = await client.send(target, text, {
+    submit: !values["no-submit"],
+    waitForIdle: !values["no-wait"],
+    timeoutMs: values["timeout"] ? parseInt(values["timeout"], 10) : undefined,
+    quietMs: values["quiet-ms"] ? parseInt(values["quiet-ms"], 10) : undefined,
+  });
+
+  process.stdout.write(result.output);
+  if (result.timedOut) {
+    console.error("\n[timed out]");
+  }
+  console.error(`[state: ${result.state}] [${result.durationMs}ms] [session: ${result.sessionId}]`);
+}
+
+async function cmdStatus(args: string[]): Promise<void> {
+  const target = args[0];
+  if (!target) {
+    console.error("Usage: termhub status <id|tmux:name>");
+    process.exit(1);
+  }
+
+  const client = new ApiClient();
+  const result = await client.status(target);
+  console.log(JSON.stringify(result, null, 2));
 }
 
 async function cmdOutput(args: string[]): Promise<void> {

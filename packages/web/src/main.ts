@@ -1,6 +1,6 @@
 import { createTerminal, type TerminalHandle } from "./terminal.js";
 import { TabBar, type SessionInfo } from "./tab-bar.js";
-import { SidePanel, type SessionCardInfo, type TmuxSessionCardInfo, type SessionPreset } from "./side-panel.js";
+import { SidePanel, type SessionCardInfo, type TmuxSessionCardInfo } from "./side-panel.js";
 import { ToastManager } from "./toast.js";
 import { NotificationManager } from "./notifications.js";
 import "@xterm/xterm/css/xterm.css";
@@ -57,7 +57,6 @@ const tabBar = new TabBar(tabBarEl, {
 const sidePanel = new SidePanel(sidePanelEl, panelToggleBtn, {
   onSelectSession: (id) => switchSession(id),
   onAttachTmux: (name) => attachTmuxSession(name),
-  onCreatePreset: (preset) => createPresetSession(preset),
 });
 
 // --- WebSocket ---
@@ -152,58 +151,15 @@ function wsSend(msg: Record<string, unknown>): void {
   }
 }
 
-// --- Preset configs ---
-const PRESET_COMMANDS: Record<SessionPreset, { name: string; command?: string }> = {
-  claude: { name: "Claude Code", command: "claude" },
-  codex: { name: "Codex", command: "codex" },
-  shell: { name: "Shell" },
-};
-
-async function createPresetSession(preset: SessionPreset): Promise<void> {
-  const config = PRESET_COMMANDS[preset];
-  const session = await api<SessionInfo>("/api/sessions", {
-    method: "POST",
-    body: JSON.stringify({ name: config.name, preset }),
-  });
-  const handle = createTerminal();
-  terminalHandles.set(session.id, handle);
-
-  handle.terminal.onData((data) => {
-    wsSend({ type: "input", data });
-  });
-  handle.terminal.onResize(({ cols, rows }) => {
-    wsSend({ type: "resize", cols, rows });
-  });
-
-  tabBar.addTab(session);
-  switchSession(session.id);
-  refreshSidePanel();
-
-  // Auto-run CLI command after a short delay for shell init
-  if (config.command) {
-    const targetId = session.id;
-    const cmd = config.command;
-    setTimeout(() => {
-      api("/api/sessions/" + targetId + "/write", {
-        method: "POST",
-        body: JSON.stringify({ data: cmd + "\n" }),
-      }).catch(() => {});
-    }, 500);
-  }
-}
-
 // --- Session management ---
 async function createSession(): Promise<void> {
   const session = await api<SessionInfo>("/api/sessions", { method: "POST" });
   const handle = createTerminal();
   terminalHandles.set(session.id, handle);
 
-  // Bind terminal input to websocket
   handle.terminal.onData((data) => {
     wsSend({ type: "input", data });
   });
-
-  // Bind resize
   handle.terminal.onResize(({ cols, rows }) => {
     wsSend({ type: "resize", cols, rows });
   });
@@ -232,12 +188,15 @@ function switchSession(id: string): void {
   if (!handle) {
     handle = createTerminal();
     terminalHandles.set(id, handle);
+    let suppressInput = true;
     handle.terminal.onData((data) => {
+      if (suppressInput) return;
       wsSend({ type: "input", data });
     });
     handle.terminal.onResize(({ cols, rows }) => {
       wsSend({ type: "resize", cols, rows });
     });
+    setTimeout(() => { suppressInput = false; }, 500);
   }
 
   if (!handle.terminal.element) {
@@ -305,6 +264,16 @@ function refreshTmuxSessions(): void {
 
 // --- tmux session attach ---
 async function attachTmuxSession(tmuxName: string): Promise<void> {
+  // Check if there's already an open tab for this tmux session
+  const sessions = await api<SessionInfo[]>("/api/sessions");
+  const existing = sessions.find(
+    (s) => s.tmuxSession === tmuxName && terminalHandles.has(s.id),
+  );
+  if (existing) {
+    switchSession(existing.id);
+    return;
+  }
+
   const session = await api<SessionInfo>("/api/sessions", {
     method: "POST",
     body: JSON.stringify({ tmuxSession: tmuxName }),
@@ -312,7 +281,11 @@ async function attachTmuxSession(tmuxName: string): Promise<void> {
   const handle = createTerminal();
   terminalHandles.set(session.id, handle);
 
+  // Suppress xterm.js initialization escape sequences (DA responses etc.)
+  // that would otherwise be sent as input to the tmux session
+  let suppressInput = true;
   handle.terminal.onData((data) => {
+    if (suppressInput) return;
     wsSend({ type: "input", data });
   });
   handle.terminal.onResize(({ cols, rows }) => {
@@ -321,6 +294,7 @@ async function attachTmuxSession(tmuxName: string): Promise<void> {
 
   tabBar.addTab(session);
   switchSession(session.id);
+  setTimeout(() => { suppressInput = false; }, 500);
   refreshSidePanel();
   refreshTmuxSessions();
 }
