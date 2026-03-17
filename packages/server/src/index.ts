@@ -115,6 +115,12 @@ app.get("/api/tmux-sessions", authMiddleware, async (_req, res) => {
   res.json(enriched);
 });
 
+// --- Server Info ---
+import { hostname } from "node:os";
+app.get("/api/info", authMiddleware, (_req, res) => {
+  res.json({ hostname: hostname() });
+});
+
 // --- Projects API ---
 app.get("/api/projects", authMiddleware, async (_req, res) => {
   const [projects, favorites, tmuxAvailable] = await Promise.all([

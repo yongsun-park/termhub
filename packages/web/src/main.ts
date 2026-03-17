@@ -519,6 +519,20 @@ loginForm.addEventListener("submit", async (e) => {
   }
 });
 
+// --- Server info ---
+async function loadServerInfo(): Promise<void> {
+  try {
+    const info = await api<{ hostname: string }>("/api/info");
+    const badge = document.createElement("span");
+    badge.className = "server-badge";
+    badge.textContent = info.hostname;
+    badge.title = `Server: ${info.hostname}`;
+    tabBarEl.insertBefore(badge, tabBarEl.querySelector(".tab-add") || tabBarEl.lastChild);
+  } catch {
+    // non-critical
+  }
+}
+
 // --- Init ---
 async function initApp(): Promise<void> {
   showApp();
@@ -526,6 +540,7 @@ async function initApp(): Promise<void> {
   notificationManager.requestPermission();
 
   loadProjects();
+  loadServerInfo();
 
   try {
     const sessions = await api<SessionInfo[]>("/api/sessions");

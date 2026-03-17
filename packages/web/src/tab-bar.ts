@@ -85,8 +85,9 @@ export class TabBar {
   }
 
   private render(): void {
-    // Preserve the panel toggle button if it exists
+    // Preserve persistent elements
     const toggleBtn = this.container.querySelector("#panel-toggle");
+    const serverBadge = this.container.querySelector(".server-badge");
     this.container.innerHTML = "";
     if (toggleBtn) this.container.appendChild(toggleBtn);
 
@@ -132,6 +133,8 @@ export class TabBar {
     addBtn.title = "New session (Ctrl+T)";
     addBtn.addEventListener("click", () => this.callbacks.onCreate());
     this.container.appendChild(addBtn);
+
+    if (serverBadge) this.container.appendChild(serverBadge);
   }
 
   private setupKeyboardShortcuts(): void {

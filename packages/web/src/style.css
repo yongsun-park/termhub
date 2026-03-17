@@ -12,8 +12,8 @@
   --color-tn-surface: #24283b;
   --color-tn-fg: #a9b1d6;
   --color-tn-fg-bright: #c0caf5;
-  --color-tn-fg-muted: #565f89;
-  --color-tn-fg-dark: #414868;
+  --color-tn-fg-muted: #8088a8;
+  --color-tn-fg-dark: #69708a;
   --color-tn-blue: #7aa2f7;
   --color-tn-blue-light: #89b4fa;
   --color-tn-purple: #bb9af7;
@@ -71,6 +71,10 @@
     @apply mobile:w-9 mobile:h-9 mobile:text-xl;
   }
   .tab-add:hover { @apply bg-tn-bg-hl text-tn-fg; }
+
+  .server-badge {
+    @apply text-[10px] text-tn-fg-dark bg-tn-bg-hl px-2 py-0.5 rounded-full ml-auto mr-1 shrink-0 select-none;
+  }
 
   .tab-badge {
     @apply inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[10px] font-bold text-tn-bg leading-none;
