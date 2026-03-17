@@ -80,6 +80,10 @@ export class TabBar {
     return this.tabs.find((t) => t.id === sessionId)?.name;
   }
 
+  hasTab(sessionId: string): boolean {
+    return this.tabs.some((t) => t.id === sessionId);
+  }
+
   private render(): void {
     // Preserve the panel toggle button if it exists
     const toggleBtn = this.container.querySelector("#panel-toggle");

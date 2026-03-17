@@ -1,5 +1,5 @@
 {
-  "name": "@aily/web",
+  "name": "@termhub/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,10 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@xterm/xterm": "^5.5.0",
     "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-search": "^0.15.0",
     "@xterm/addon-webgl": "^0.18.0",
-    "@xterm/addon-search": "^0.15.0"
+    "@xterm/xterm": "^5.5.0",
+    "lucide": "^0.577.0"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

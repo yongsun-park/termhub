@@ -14,6 +14,8 @@ import { createSendHandler } from "./send.js";
 import { stripAnsi } from "./ansi.js";
 import { detectClaudeState } from "./claude-state.js";
 import { resolveSession, isResolveError } from "./resolve-session.js";
+import { listProjects } from "./projects.js";
+import { getFavorites, setFavorites } from "./favorites.js";
 
 const PORT = parseInt(process.env.PORT || "4000", 10);
 const app = express();
@@ -78,15 +80,39 @@ app.delete("/api/sessions/:id", authMiddleware, (req, res) => {
 
 app.get("/api/tmux-sessions", authMiddleware, async (_req, res) => {
   const tmuxSessions = await listTmuxSessions();
-  const ailySessions = sessionManager.list();
+  const termhubSessions = sessionManager.list();
   const attachedNames = new Set(
-    ailySessions.filter((s) => s.tmuxSession).map((s) => s.tmuxSession!)
+    termhubSessions.filter((s) => s.tmuxSession).map((s) => s.tmuxSession!)
   );
   const enriched = tmuxSessions.map((ts) => ({
     ...ts,
-    ailyAttached: attachedNames.has(ts.name),
+    termhubAttached: attachedNames.has(ts.name),
   }));
   res.json(enriched);
+});
+
+// --- Projects API ---
+app.get("/api/projects", authMiddleware, async (_req, res) => {
+  const [projects, favorites] = await Promise.all([listProjects(), getFavorites()]);
+  const favSet = new Set(favorites);
+  const enriched = projects.map((p) => ({ ...p, pinned: favSet.has(p.path) }));
+  res.json(enriched);
+});
+
+// --- Favorites API ---
+app.get("/api/favorites", authMiddleware, async (_req, res) => {
+  const favorites = await getFavorites();
+  res.json(favorites);
+});
+
+app.put("/api/favorites", authMiddleware, async (req, res) => {
+  const { paths } = req.body || {};
+  if (!Array.isArray(paths)) {
+    res.status(400).json({ error: "paths (string[]) is required" });
+    return;
+  }
+  await setFavorites(paths);
+  res.json({ ok: true });
 });
 
 // --- Exec, Send & Stream API ---
@@ -177,7 +203,7 @@ server.on("upgrade", (req, socket, head) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Aily server running on http://localhost:${PORT}`);
+  console.log(`TermHub server running on http://localhost:${PORT}`);
 });
 
 // Graceful shutdown

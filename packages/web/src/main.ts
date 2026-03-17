@@ -1,13 +1,19 @@
 import { createTerminal, type TerminalHandle } from "./terminal.js";
 import { TabBar, type SessionInfo } from "./tab-bar.js";
-import { SidePanel, type SessionCardInfo, type TmuxSessionCardInfo } from "./side-panel.js";
+import {
+  SidePanel,
+  type SessionCardInfo,
+  type TmuxSessionCardInfo,
+  type ProjectInfo,
+  type LaunchMode,
+} from "./side-panel.js";
 import { ToastManager } from "./toast.js";
 import { NotificationManager } from "./notifications.js";
 import "@xterm/xterm/css/xterm.css";
 import "./style.css";
 
 const API_BASE = "";
-let token: string | null = localStorage.getItem("aily_token");
+let token: string | null = localStorage.getItem("termhub_token");
 let ws: WebSocket | null = null;
 let currentSessionId: string | null = null;
 const terminalHandles = new Map<string, TerminalHandle>();
@@ -26,6 +32,10 @@ const panelToggleBtn = document.getElementById("panel-toggle")!;
 const toastManager = new ToastManager();
 const notificationManager = new NotificationManager();
 
+function isMobile(): boolean {
+  return window.innerWidth <= 600;
+}
+
 // --- API helpers ---
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -38,7 +48,7 @@ async function api<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (res.status === 401) {
     token = null;
-    localStorage.removeItem("aily_token");
+    localStorage.removeItem("termhub_token");
     showLogin();
     throw new Error("Unauthorized");
   }
@@ -57,6 +67,8 @@ const tabBar = new TabBar(tabBarEl, {
 const sidePanel = new SidePanel(sidePanelEl, panelToggleBtn, {
   onSelectSession: (id) => switchSession(id),
   onAttachTmux: (name) => attachTmuxSession(name),
+  onLaunchProject: (project, mode) => launchProject(project, mode),
+  onTogglePin: (path, pinned) => togglePin(path, pinned),
 });
 
 // --- WebSocket ---
@@ -106,13 +118,11 @@ function connectWs(): void {
         const severity = msg.severity as "error" | "warning" | "info";
         const sessionName = tabBar.getSessionName(alertSid) || alertSid;
 
-        // Badge on tab & side panel (only for background sessions)
         if (alertSid !== currentSessionId) {
           tabBar.addBadge(alertSid, severity);
           sidePanel.addBadge(alertSid, severity);
         }
 
-        // Toast always
         toastManager.show({
           severity,
           title: sessionName,
@@ -120,7 +130,6 @@ function connectWs(): void {
           onClick: () => switchSession(alertSid),
         });
 
-        // OS notification when tab is hidden
         notificationManager.show(
           `[${severity}] ${sessionName}`,
           msg.message,
@@ -129,7 +138,6 @@ function connectWs(): void {
         break;
       }
       case "sessions": {
-        // Server-pushed session list update
         refreshSidePanel(msg.sessions);
         break;
       }
@@ -152,8 +160,11 @@ function wsSend(msg: Record<string, unknown>): void {
 }
 
 // --- Session management ---
-async function createSession(): Promise<void> {
-  const session = await api<SessionInfo>("/api/sessions", { method: "POST" });
+async function createSession(options?: { cwd?: string; name?: string }): Promise<SessionInfo> {
+  const session = await api<SessionInfo>("/api/sessions", {
+    method: "POST",
+    body: options ? JSON.stringify(options) : undefined,
+  });
   const handle = createTerminal();
   terminalHandles.set(session.id, handle);
 
@@ -167,10 +178,10 @@ async function createSession(): Promise<void> {
   tabBar.addTab(session);
   switchSession(session.id);
   refreshSidePanel();
+  return session;
 }
 
 function switchSession(id: string): void {
-  // Hide current terminal
   if (currentSessionId) {
     const prevHandle = terminalHandles.get(currentSessionId);
     if (prevHandle) {
@@ -208,10 +219,8 @@ function switchSession(id: string): void {
   handle.fitAddon.fit();
   handle.terminal.focus();
 
-  // Attach websocket to this session
   wsSend({ type: "attach", sessionId: id });
 
-  // Send current size
   const { cols, rows } = handle.terminal;
   wsSend({ type: "resize", cols, rows });
 }
@@ -220,7 +229,7 @@ async function closeSession(id: string): Promise<void> {
   try {
     await api(`/api/sessions/${id}`, { method: "DELETE" });
   } catch {
-    // Session may already be gone on server — proceed with local cleanup
+    // Session may already be gone on server
   }
   const handle = terminalHandles.get(id);
   if (handle) {
@@ -233,15 +242,107 @@ async function closeSession(id: string): Promise<void> {
   refreshTmuxSessions();
   if (currentSessionId === id) {
     currentSessionId = null;
-    // Switch to another tab if available
     try {
       const sessions = await api<SessionInfo[]>("/api/sessions");
       if (sessions.length > 0) {
         switchSession(sessions[sessions.length - 1].id);
       }
     } catch {
-      // Server unreachable — no tab to switch to
+      // no tab to switch to
     }
+  }
+}
+
+// --- Unified project launcher ---
+const MODE_LABELS: Record<LaunchMode, string> = {
+  shell: "Shell",
+  claude: "Claude",
+  "claude-rc": "Claude RC",
+};
+
+const MODE_COMMANDS: Record<LaunchMode, string | null> = {
+  shell: null,
+  claude: "claude",
+  "claude-rc": "claude --remote-control",
+};
+
+async function launchProject(project: ProjectInfo, mode: LaunchMode): Promise<void> {
+  if (sidePanel.isProjectLaunching(project.path)) return;
+
+  sidePanel.setProjectLaunching(project.path);
+
+  // Check for existing session with same cwd and mode prefix
+  const prefix = mode === "shell" ? "shell:" : mode === "claude" ? "claude:" : "claude-rc:";
+  try {
+    const sessions = await api<SessionCardInfo[]>("/api/sessions");
+    const existing = sessions.find(
+      (s) => s.cwd === project.path && s.alive && s.name.startsWith(prefix)
+    );
+    if (existing) {
+      if (terminalHandles.has(existing.id)) {
+        switchSession(existing.id);
+      } else {
+        const handle = createTerminal();
+        terminalHandles.set(existing.id, handle);
+        let suppressInput = true;
+        handle.terminal.onData((data) => {
+          if (suppressInput) return;
+          wsSend({ type: "input", data });
+        });
+        handle.terminal.onResize(({ cols, rows }) => {
+          wsSend({ type: "resize", cols, rows });
+        });
+        if (!tabBar.hasTab(existing.id)) {
+          tabBar.addTab(existing as SessionInfo);
+        }
+        switchSession(existing.id);
+        setTimeout(() => { suppressInput = false; }, 500);
+      }
+      if (isMobile()) sidePanel.close();
+      sidePanel.clearProjectState(project.path);
+      toastManager.show({ severity: "info", title: project.name, message: `Switched to existing ${MODE_LABELS[mode]} session` });
+      return;
+    }
+  } catch {
+    // continue with new session
+  }
+
+  if (isMobile()) sidePanel.close();
+
+  try {
+    const session = await createSession({
+      cwd: project.path,
+      name: `${prefix}${project.name}`,
+    });
+
+    const command = MODE_COMMANDS[mode];
+    if (command) {
+      try {
+        await api(`/api/sessions/${session.id}/send`, {
+          method: "POST",
+          body: JSON.stringify({ text: command, waitForIdle: true, timeoutMs: 60000 }),
+        });
+      } catch {
+        toastManager.show({
+          severity: "warning",
+          title: project.name,
+          message: `${MODE_LABELS[mode]} launch may have failed — check terminal`,
+        });
+        sidePanel.clearProjectState(project.path);
+        return;
+      }
+    }
+
+    sidePanel.clearProjectState(project.path);
+    toastManager.show({ severity: "info", title: project.name, message: `${MODE_LABELS[mode]} ready` });
+  } catch (err) {
+    sidePanel.setProjectError(project.path);
+    toastManager.show({
+      severity: "error",
+      title: project.name,
+      message: err instanceof Error ? err.message : "Failed to launch",
+    });
+    setTimeout(() => sidePanel.clearProjectState(project.path), 3000);
   }
 }
 
@@ -262,9 +363,33 @@ function refreshTmuxSessions(): void {
     .catch(() => sidePanel.setTmuxSessions([]));
 }
 
+async function loadProjects(): Promise<void> {
+  try {
+    const projects = await api<ProjectInfo[]>("/api/projects");
+    sidePanel.setProjects(projects);
+  } catch {
+    sidePanel.setProjectsError();
+  }
+}
+
+async function togglePin(projectPath: string, pinned: boolean): Promise<void> {
+  try {
+    const current = await api<string[]>("/api/favorites");
+    const updated = pinned
+      ? [...current.filter((p) => p !== projectPath), projectPath]
+      : current.filter((p) => p !== projectPath);
+    await api("/api/favorites", {
+      method: "PUT",
+      body: JSON.stringify({ paths: updated }),
+    });
+    await loadProjects();
+  } catch {
+    toastManager.show({ severity: "error", title: "Pin", message: "Failed to update favorites" });
+  }
+}
+
 // --- tmux session attach ---
 async function attachTmuxSession(tmuxName: string): Promise<void> {
-  // Check if there's already an open tab for this tmux session
   const sessions = await api<SessionInfo[]>("/api/sessions");
   const existing = sessions.find(
     (s) => s.tmuxSession === tmuxName && terminalHandles.has(s.id),
@@ -281,8 +406,6 @@ async function attachTmuxSession(tmuxName: string): Promise<void> {
   const handle = createTerminal();
   terminalHandles.set(session.id, handle);
 
-  // Suppress xterm.js initialization escape sequences (DA responses etc.)
-  // that would otherwise be sent as input to the tmux session
   let suppressInput = true;
   handle.terminal.onData((data) => {
     if (suppressInput) return;
@@ -326,7 +449,7 @@ loginForm.addEventListener("submit", async (e) => {
     }
     const data = await result.json();
     token = data.token;
-    localStorage.setItem("aily_token", token!);
+    localStorage.setItem("termhub_token", token!);
     await initApp();
   } catch {
     loginError.textContent = "Connection failed";
@@ -339,18 +462,25 @@ async function initApp(): Promise<void> {
   connectWs();
   notificationManager.requestPermission();
 
-  // Load existing sessions
+  loadProjects();
+
   try {
     const sessions = await api<SessionInfo[]>("/api/sessions");
     if (sessions.length > 0) {
       tabBar.setTabs(sessions, sessions[0].id);
       sidePanel.setSessions(sessions as SessionCardInfo[], sessions[0].id);
       switchSession(sessions[0].id);
+    } else if (isMobile()) {
+      sidePanel.open();
     } else {
       await createSession();
     }
   } catch {
-    await createSession();
+    if (isMobile()) {
+      sidePanel.open();
+    } else {
+      await createSession();
+    }
   }
 
   refreshSidePanel();
@@ -360,7 +490,6 @@ async function initApp(): Promise<void> {
 
 // --- Boot ---
 if (token) {
-  // Validate token by fetching sessions
   api("/api/sessions")
     .then(() => initApp())
     .catch(() => showLogin());
