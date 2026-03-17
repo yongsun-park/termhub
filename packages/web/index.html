@@ -1,27 +1,31 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" class="h-full">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aily</title>
+  <title>TermHub</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
 </head>
-<body>
-  <div id="login-screen">
-    <h1>AILY</h1>
-    <form id="login-form">
-      <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
-      <button type="submit">Login</button>
+<body class="h-full bg-tn-bg text-tn-fg font-sans overflow-hidden">
+  <div id="login-screen" class="flex items-center justify-center h-full flex-col gap-4">
+    <h1 class="text-[28px] text-tn-fg-bright font-light tracking-[4px]">TERMHUB</h1>
+    <form id="login-form" class="flex gap-2">
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password"
+        class="px-4 py-2.5 bg-tn-surface border border-tn-fg-dark rounded-md text-tn-fg-bright text-sm outline-none w-[260px] focus:border-tn-blue" />
+      <button type="submit"
+        class="px-5 py-2.5 bg-tn-blue border-none rounded-md text-tn-bg text-sm font-semibold cursor-pointer hover:bg-tn-blue-light">Login</button>
     </form>
-    <div id="login-error"></div>
+    <div id="login-error" class="text-tn-red text-[13px] min-h-[20px]"></div>
   </div>
-  <div id="app-screen">
+  <div id="app-screen" class="hidden flex-col h-full">
     <div id="tab-bar">
       <button id="panel-toggle" title="Toggle panel (Ctrl+B)">≡</button>
     </div>
-    <div id="main-area">
+    <div id="main-area" class="flex flex-1 overflow-hidden">
       <div id="side-panel"></div>
-      <div id="terminal-container"></div>
+      <div id="terminal-area" class="flex flex-1 flex-col overflow-hidden">
+        <div id="terminal-container" class="flex-1 relative overflow-hidden"></div>
+      </div>
     </div>
   </div>
   <script type="module" src="/src/main.ts"></script>

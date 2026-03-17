@@ -26,10 +26,11 @@ export interface ProjectInfo {
   submodules?: ProjectInfo[];
 }
 
-export type LaunchMode = "shell" | "claude" | "claude-rc";
+export type LaunchMode = "shell" | "claude" | "claude-rc" | "codex";
 
 export interface SidePanelCallbacks {
   onSelectSession(sessionId: string): void;
+  onCloseSession(sessionId: string, killTmux: boolean): void;
   onAttachTmux(sessionName: string): void;
   onLaunchProject(project: ProjectInfo, mode: LaunchMode): void;
   onTogglePin(projectPath: string, pinned: boolean): void;
@@ -418,9 +419,10 @@ export class SidePanel {
       const options = document.createElement("div");
       options.className = `launch-options${isSub ? " submodule" : ""}`;
 
-      const modes: { mode: LaunchMode; label: string; iconName: "radio" | "sparkles" | "terminal" }[] = [
+      const modes: { mode: LaunchMode; label: string; iconName: "radio" | "sparkles" | "zap" | "terminal" }[] = [
         { mode: "claude-rc", label: "Claude RC", iconName: "radio" },
         { mode: "claude", label: "Claude", iconName: "sparkles" },
+        { mode: "codex", label: "Codex", iconName: "zap" },
         { mode: "shell", label: "Shell", iconName: "terminal" },
       ];
 
@@ -471,6 +473,41 @@ export class SidePanel {
         badgeEl.textContent = badge.count > 99 ? "99+" : String(badge.count);
         header.appendChild(badgeEl);
       }
+
+      card.appendChild(header);
+
+      // Copy tmux attach command button
+      if (session.tmuxSession) {
+        const copyBtn = document.createElement("span");
+        copyBtn.className = "session-card-copy";
+        copyBtn.appendChild(icon("clipboard", 12));
+        copyBtn.title = "Copy SSH + tmux attach command";
+        copyBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const host = location.hostname;
+          const cmd = `ssh ${host} -t "tmux attach -t '${session.tmuxSession}'"`;
+          navigator.clipboard.writeText(cmd).then(() => {
+            copyBtn.innerHTML = "";
+            copyBtn.appendChild(icon("check", 12));
+            setTimeout(() => {
+              copyBtn.innerHTML = "";
+              copyBtn.appendChild(icon("clipboard", 12));
+            }, 1500);
+          });
+        });
+        header.appendChild(copyBtn);
+      }
+
+      // Detach / close button
+      const closeBtn = document.createElement("span");
+      closeBtn.className = "session-card-close";
+      closeBtn.appendChild(icon("x", 12));
+      closeBtn.title = session.tmuxSession ? "Detach (keep tmux alive)" : "Close session";
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.callbacks.onCloseSession(session.id, false);
+      });
+      header.appendChild(closeBtn);
 
       card.appendChild(header);
 

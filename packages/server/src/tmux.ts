@@ -35,6 +35,34 @@ export async function listTmuxSessions(): Promise<TmuxSessionInfo[]> {
   }
 }
 
+let _tmuxAvailable: boolean | null = null;
+
+export async function isTmuxAvailable(): Promise<boolean> {
+  if (_tmuxAvailable !== null) return _tmuxAvailable;
+  try {
+    await execFileAsync("tmux", ["-V"]);
+    _tmuxAvailable = true;
+  } catch {
+    _tmuxAvailable = false;
+  }
+  return _tmuxAvailable;
+}
+
+export async function createTmuxSession(sessionName: string, cwd?: string): Promise<void> {
+  const args = ["new-session", "-d", "-s", sessionName];
+  if (cwd) args.push("-c", cwd);
+  await execFileAsync("tmux", args);
+}
+
+export async function killTmuxSession(sessionName: string): Promise<boolean> {
+  try {
+    await execFileAsync("tmux", ["kill-session", "-t", sessionName]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function tmuxSessionExists(sessionName: string): Promise<boolean> {
   try {
     await execFileAsync("tmux", ["has-session", "-t", sessionName]);

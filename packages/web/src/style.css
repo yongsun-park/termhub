@@ -1,870 +1,434 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html, body {
-  height: 100%;
-  background: #1a1b26;
-  color: #a9b1d6;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  overflow: hidden;
-}
-
-/* Login Screen */
-#login-screen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  flex-direction: column;
-  gap: 16px;
-}
-
-#login-screen h1 {
-  font-size: 28px;
-  color: #c0caf5;
-  font-weight: 300;
-  letter-spacing: 4px;
-}
-
-#login-form {
-  display: flex;
-  gap: 8px;
-}
-
-#login-form input {
-  padding: 10px 16px;
-  background: #24283b;
-  border: 1px solid #414868;
-  border-radius: 6px;
-  color: #c0caf5;
-  font-size: 14px;
-  outline: none;
-  width: 260px;
-}
-
-#login-form input:focus {
-  border-color: #7aa2f7;
-}
-
-#login-form button {
-  padding: 10px 20px;
-  background: #7aa2f7;
-  border: none;
-  border-radius: 6px;
-  color: #1a1b26;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-#login-form button:hover {
-  background: #89b4fa;
-}
-
-#login-error {
-  color: #f7768e;
-  font-size: 13px;
-  min-height: 20px;
-}
-
-/* App Screen */
-#app-screen {
-  display: none;
-  flex-direction: column;
-  height: 100%;
-}
-
-/* Tab Bar */
-#tab-bar {
-  display: flex;
-  align-items: center;
-  background: #16161e;
-  border-bottom: 1px solid #1e2030;
-  height: 36px;
-  padding: 0 4px;
-  gap: 2px;
-  flex-shrink: 0;
-  overflow-x: auto;
-}
-
-#tab-bar::-webkit-scrollbar {
-  display: none;
-}
-
-.tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 6px 6px 0 0;
-  background: transparent;
-  color: #565f89;
-  font-size: 12px;
-  cursor: pointer;
-  white-space: nowrap;
-  user-select: none;
-  transition: background 0.15s, color 0.15s;
-}
-
-.tab:hover {
-  background: #1e2030;
-  color: #a9b1d6;
-}
-
-.tab.active {
-  background: #1a1b26;
-  color: #c0caf5;
-}
-
-.tab.dead .tab-name {
-  text-decoration: line-through;
-  opacity: 0.5;
-}
-
-.tab-name {
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tab-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  border-radius: 3px;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.tab:hover .tab-close {
-  opacity: 0.6;
-}
-
-.tab-close:hover {
-  opacity: 1 !important;
-  background: #f7768e33;
-  color: #f7768e;
-}
-
-.tab-add {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: #565f89;
-  font-size: 18px;
-  cursor: pointer;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.tab-add:hover {
-  background: #1e2030;
-  color: #a9b1d6;
-}
-
-/* Panel Toggle Button */
-#panel-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: #565f89;
-  font-size: 16px;
-  cursor: pointer;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-#panel-toggle:hover,
-#panel-toggle.active {
-  background: #1e2030;
-  color: #a9b1d6;
-}
-
-/* Main Area (side panel + terminal) */
-#main-area {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* Side Panel */
-#side-panel {
-  width: 0;
-  overflow: hidden;
-  background: #16161e;
-  border-right: 1px solid #1e2030;
-  flex-shrink: 0;
-  transition: width 0.2s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-#side-panel.open {
-  width: 280px;
-}
-
-/* Side Panel Tab Bar */
-.sp-tab-bar {
-  display: flex;
-  border-bottom: 1px solid #1e2030;
-  flex-shrink: 0;
-}
-
-.sp-tab-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 10px 8px;
-  border: none;
-  background: transparent;
-  color: #565f89;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color 0.15s, border-color 0.15s;
-  user-select: none;
-}
-
-.sp-tab-btn:hover {
-  color: #a9b1d6;
-}
-
-.sp-tab-btn.active {
-  color: #c0caf5;
-  border-bottom-color: #7aa2f7;
-}
-
-.sp-tab-btn svg {
-  flex-shrink: 0;
-}
-
-.sp-tab-badge {
-  font-size: 10px;
-  color: #414868;
-  display: none;
-}
-
-.sp-tab-badge.visible {
-  display: inline;
-}
-
-.sp-close-btn {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  border: none;
-  background: transparent;
-  color: #565f89;
-  font-size: 20px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.sp-close-btn:hover {
-  color: #c0caf5;
-}
-
-/* Side Panel Panes */
-.sp-pane {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.sp-pane.hidden {
-  display: none;
-}
-
-.sp-pane::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sp-pane::-webkit-scrollbar-thumb {
-  background: #414868;
-  border-radius: 2px;
-}
-
-/* Search input */
-.side-panel-search {
-  display: block;
-  width: calc(100% - 16px);
-  margin: 4px 8px 6px;
-  padding: 6px 10px;
-  background: #1a1b26;
-  border: 1px solid #1e2030;
-  border-radius: 4px;
-  color: #c0caf5;
-  font-size: 12px;
-  outline: none;
-}
-
-.side-panel-search:focus {
-  border-color: #414868;
-}
-
-.side-panel-search::placeholder {
-  color: #414868;
-}
-
-.side-panel-list {
-  padding: 0 8px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.side-panel-empty {
-  padding: 8px 12px;
-  font-size: 11px;
-  color: #414868;
-  font-style: italic;
-}
-
-/* Session Card */
-.session-card {
-  padding: 8px 10px;
-  background: #1a1b26;
-  border: 1px solid #1e2030;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-  min-width: 0;
-}
-
-.session-card:hover {
-  border-color: #414868;
-  background: #1e2030;
-}
-
-.session-card.active {
-  border-color: #7aa2f7;
-}
-
-.session-card-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.session-status {
-  flex-shrink: 0;
-}
-
-.session-status.alive {
-  color: #9ece6a;
-}
-
-.session-status.dead {
-  color: #414868;
-}
-
-.session-card-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #c0caf5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-}
-
-.session-card-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #1a1b26;
-  flex-shrink: 0;
-}
-
-.badge-error { background: #f7768e; }
-.badge-warning { background: #e0af68; }
-.badge-info { background: #7aa2f7; }
-
-.session-card-meta {
-  font-size: 11px;
-  color: #565f89;
-  margin-top: 4px;
-}
-
-/* session-card-cwd removed — path shown as tooltip only */
-
-/* tmux Session Card */
-.tmux-card {
-  border-left: 2px solid #9ece6a;
-}
-
-.tmux-card:hover {
-  border-color: #9ece6a;
-}
-
-/* Project Card — compact single-line */
-.project-card {
-  padding: 8px 10px;
-  background: #1a1b26;
-  border: 1px solid #1e2030;
-  border-left: 3px solid #bb9af7;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: border-color 0.15s, opacity 0.15s, background 0.15s;
-  min-width: 0;
-}
-
-.project-card:hover {
-  border-color: #bb9af7;
-  background: #1e2030;
-}
-
-.project-card.launching {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.project-card.error {
-  border-left-color: #f7768e;
-  border-color: #f7768e;
-}
-
-.project-card.submodule {
-  margin-left: 16px;
-  border-left-color: #7dcfff;
-  padding: 6px 10px;
-}
-
-.project-card.submodule:hover {
-  border-color: #7dcfff;
-}
-
-.project-card-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.project-card-expand {
-  color: #565f89;
-  flex-shrink: 0;
-  cursor: pointer;
-  transition: color 0.15s;
-  display: flex;
-  align-items: center;
-}
-
-.project-card-expand:hover {
-  color: #c0caf5;
-}
-
-.project-card-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #c0caf5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-}
-
-/* Lucide icon in project card */
-.project-card-icon {
-  color: #565f89;
-  flex-shrink: 0;
-}
-
-.project-card:hover .project-card-icon {
-  color: #7aa2f7;
-}
-
-.project-card.submodule .project-card-icon {
-  color: #414868;
-}
-
-.project-card.submodule:hover .project-card-icon {
-  color: #7dcfff;
-}
-
-/* Spinner animation for Lucide loader icon */
-.spinning {
-  animation: spin 1s linear infinite;
-  color: #bb9af7;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.project-card-wrapper {
-  display: contents;
-}
-
-/* Pin button */
-.project-card-pin {
-  color: #414868;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: color 0.15s, opacity 0.15s;
-  opacity: 0;
-  display: flex;
-  align-items: center;
-  padding: 2px;
-}
-
-.project-card:hover .project-card-pin,
-.project-card-pin.pinned {
-  opacity: 1;
-}
-
-.project-card-pin.pinned {
-  color: #e0af68;
-}
-
-.project-card-pin:hover {
-  color: #e0af68;
-}
-
-/* Divider between pinned and unpinned */
-.pin-divider {
-  height: 1px;
-  background: #1e2030;
-  margin: 4px 0;
-}
-
-.project-section-error {
-  color: #f7768e;
-}
-
-.side-panel-section-status {
-  padding: 0 8px;
-}
-
-/* Launch options row */
-.launch-options {
-  display: flex;
-  gap: 4px;
-  padding: 0 0 2px;
-}
-
-.launch-options.submodule {
-  margin-left: 16px;
-}
-
-.launch-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 7px 4px;
-  border: 1px solid #1e2030;
-  border-radius: 4px;
-  background: #1a1b26;
-  color: #a9b1d6;
-  font-size: 11px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-  white-space: nowrap;
-}
-
-.launch-btn:hover {
-  background: #24283b;
-}
-
-.launch-btn svg {
-  flex-shrink: 0;
-}
-
-.launch-claude-rc {
-  border-color: #bb9af744;
-  color: #bb9af7;
-}
-.launch-claude-rc:hover {
-  background: #bb9af71a;
-  border-color: #bb9af7;
-}
-
-.launch-claude {
-  border-color: #7aa2f744;
-  color: #7aa2f7;
-}
-.launch-claude:hover {
-  background: #7aa2f71a;
-  border-color: #7aa2f7;
-}
-
-.launch-shell {
-  border-color: #9ece6a44;
-  color: #9ece6a;
-}
-.launch-shell:hover {
-  background: #9ece6a1a;
-  border-color: #9ece6a;
-}
-
-/* Side Panel Backdrop (mobile overlay) */
-.side-panel-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 99;
-}
-
-/* Terminal Container */
-#terminal-container {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-}
-
-#terminal-container .xterm {
-  height: 100%;
-  padding: 4px;
-}
-
-
-/* Toast Container */
-#toast-container {
-  position: fixed;
-  top: 44px;
-  right: 12px;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 380px;
-  pointer-events: none;
-}
-
-.toast {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  background: #24283b;
-  border-left: 3px solid #7aa2f7;
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  font-size: 12px;
-  pointer-events: auto;
-  transform: translateX(120%);
-  opacity: 0;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.toast-visible {
-  transform: translateX(0);
-  opacity: 1;
-}
-
-.toast-exit {
-  transform: translateX(120%);
-  opacity: 0;
-}
-
-.toast-error { border-left-color: #f7768e; }
-.toast-warning { border-left-color: #e0af68; }
-.toast-info { border-left-color: #7aa2f7; }
-
-.toast-icon {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  flex-shrink: 0;
-  color: #1a1b26;
-}
-
-.toast-error .toast-icon { background: #f7768e; }
-.toast-warning .toast-icon { background: #e0af68; }
-.toast-info .toast-icon { background: #7aa2f7; }
-
-.toast-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.toast-title {
-  color: #c0caf5;
-  font-weight: 600;
-  margin-bottom: 2px;
-}
-
-.toast-message {
-  color: #a9b1d6;
-  line-height: 1.4;
-  word-break: break-word;
-}
-
-.toast-close {
-  background: transparent;
-  border: none;
-  color: #565f89;
-  font-size: 16px;
-  cursor: pointer;
-  padding: 0 2px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.toast-close:hover {
-  color: #c0caf5;
-}
-
-/* Tab Badge */
-.tab-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #1a1b26;
-  line-height: 1;
-}
-
-.tab-badge-error { background: #f7768e; }
-.tab-badge-warning { background: #e0af68; }
-.tab-badge-info { background: #7aa2f7; }
-
-/* Mobile */
-@media (max-width: 600px) {
-  #login-screen h1 {
-    font-size: 22px;
-  }
-
-  #login-form {
-    flex-direction: column;
-    padding: 0 24px;
-    width: 100%;
-  }
-
-  #login-form input {
-    width: 100%;
-  }
-
-  #login-form button {
-    width: 100%;
-  }
-
+@import "tailwindcss";
+
+/* ============================
+   Tokyo Night Theme
+   ============================ */
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --color-tn-bg: #1a1b26;
+  --color-tn-bg-dark: #16161e;
+  --color-tn-bg-hl: #1e2030;
+  --color-tn-surface: #24283b;
+  --color-tn-fg: #a9b1d6;
+  --color-tn-fg-bright: #c0caf5;
+  --color-tn-fg-muted: #565f89;
+  --color-tn-fg-dark: #414868;
+  --color-tn-blue: #7aa2f7;
+  --color-tn-blue-light: #89b4fa;
+  --color-tn-purple: #bb9af7;
+  --color-tn-green: #9ece6a;
+  --color-tn-red: #f7768e;
+  --color-tn-yellow: #e0af68;
+  --color-tn-cyan: #7dcfff;
+}
+
+@custom-variant mobile (@media (max-width: 600px));
+
+@utility scrollbar-none {
+  &::-webkit-scrollbar { display: none; }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@utility scrollbar-thin {
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: theme(--color-tn-fg-dark); border-radius: 2px; }
+}
+
+/* ============================
+   Tab Bar
+   ============================ */
+@layer components {
   #tab-bar {
-    height: 40px;
-    -webkit-overflow-scrolling: touch;
+    @apply flex items-center bg-tn-bg-dark border-b border-tn-bg-hl h-9 px-1 gap-0.5 shrink-0 overflow-x-auto scrollbar-none;
+    @apply mobile:h-10;
   }
 
   .tab {
-    padding: 6px 10px;
-    font-size: 11px;
+    @apply flex items-center gap-1.5 px-3 py-1 rounded-t-md bg-transparent text-tn-fg-muted text-xs cursor-pointer whitespace-nowrap select-none;
+    transition: background 0.15s, color 0.15s;
+    @apply mobile:px-2.5 mobile:py-1.5 mobile:text-[11px];
+  }
+  .tab:hover { @apply bg-tn-bg-hl text-tn-fg; }
+  .tab.active { @apply bg-tn-bg text-tn-fg-bright; }
+  .tab.dead .tab-name { @apply line-through opacity-50; }
+
+  .tab-name {
+    @apply max-w-[150px] overflow-hidden text-ellipsis;
   }
 
   .tab-close {
-    opacity: 0.6;
-    width: 20px;
-    height: 20px;
-    font-size: 16px;
+    @apply flex items-center justify-center w-4 h-4 border-none bg-transparent text-inherit text-sm leading-none cursor-pointer rounded-sm opacity-0;
+    transition: opacity 0.15s;
+    @apply mobile:opacity-60 mobile:w-5 mobile:h-5 mobile:text-base;
   }
+  .tab:hover .tab-close { @apply opacity-60; }
+  .tab-close:hover { @apply !opacity-100 text-tn-red; background: #f7768e33; }
 
   .tab-add {
-    width: 36px;
-    height: 36px;
-    font-size: 20px;
+    @apply flex items-center justify-center w-7 h-7 border-none bg-transparent text-tn-fg-muted text-lg cursor-pointer rounded shrink-0;
+    @apply mobile:w-9 mobile:h-9 mobile:text-xl;
+  }
+  .tab-add:hover { @apply bg-tn-bg-hl text-tn-fg; }
+
+  .tab-badge {
+    @apply inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[10px] font-bold text-tn-bg leading-none;
+  }
+  .tab-badge-error { @apply bg-tn-red; }
+  .tab-badge-warning { @apply bg-tn-yellow; }
+  .tab-badge-info { @apply bg-tn-blue; }
+}
+
+/* ============================
+   Panel Toggle
+   ============================ */
+@layer components {
+  #panel-toggle {
+    @apply flex items-center justify-center w-8 h-7 border-none bg-transparent text-tn-fg-muted text-base cursor-pointer rounded shrink-0;
+  }
+  #panel-toggle:hover, #panel-toggle.active {
+    @apply bg-tn-bg-hl text-tn-fg;
+  }
+}
+
+/* ============================
+   Side Panel
+   ============================ */
+@layer components {
+  #side-panel {
+    @apply w-0 overflow-hidden bg-tn-bg-dark border-r border-tn-bg-hl shrink-0 flex flex-col;
+    transition: width 0.2s ease;
+  }
+  #side-panel.open { @apply w-[280px]; }
+
+  .sp-tab-bar {
+    @apply flex border-b border-tn-bg-hl shrink-0;
   }
 
-  #terminal-container .xterm {
-    padding: 2px;
-  }
-
-  /* Mobile overlay side panel */
-  #side-panel.open {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100% !important;
-    height: 100%;
-    z-index: 100;
-  }
-
-  .side-panel-backdrop.visible {
-    display: block;
-  }
-
-  /* Close button visible on mobile */
-  .sp-close-btn {
-    display: flex !important;
-  }
-
-  /* Larger touch targets on mobile */
   .sp-tab-btn {
-    padding: 14px 8px;
-    font-size: 13px;
+    @apply flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 border-none bg-transparent text-tn-fg-muted text-xs font-semibold cursor-pointer select-none;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    @apply mobile:py-3.5 mobile:text-[13px];
   }
+  .sp-tab-btn:hover { @apply text-tn-fg; }
+  .sp-tab-btn.active { @apply text-tn-fg-bright; border-bottom-color: theme(--color-tn-blue); }
+  .sp-tab-btn svg { @apply shrink-0; }
+
+  .sp-tab-badge {
+    @apply text-[10px] text-tn-fg-dark hidden;
+  }
+  .sp-tab-badge.visible { @apply inline; }
+
+  .sp-close-btn {
+    @apply hidden items-center justify-center w-10 border-none bg-transparent text-tn-fg-muted text-xl cursor-pointer shrink-0;
+    @apply mobile:!flex;
+  }
+  .sp-close-btn:hover { @apply text-tn-fg-bright; }
+
+  .sp-pane {
+    @apply flex-1 overflow-y-auto overflow-x-hidden flex flex-col scrollbar-thin;
+  }
+  .sp-pane.hidden { @apply !hidden; }
+}
+
+/* ============================
+   Side Panel — Search & Lists
+   ============================ */
+@layer components {
+  .side-panel-search {
+    @apply block w-[calc(100%-16px)] mx-2 mt-1 mb-1.5 px-2.5 py-1.5 bg-tn-bg border border-tn-bg-hl rounded text-tn-fg-bright text-xs outline-none;
+    @apply mobile:py-2.5 mobile:px-3 mobile:text-sm;
+  }
+  .side-panel-search:focus { @apply border-tn-fg-dark; }
+  .side-panel-search::placeholder { @apply text-tn-fg-dark; }
+
+  .side-panel-list {
+    @apply px-2 pb-2 flex flex-col gap-1;
+  }
+
+  .side-panel-empty {
+    @apply px-3 py-2 text-[11px] text-tn-fg-dark italic;
+  }
+
+  .side-panel-section-status {
+    @apply px-2;
+  }
+  .project-section-error { @apply text-tn-red; }
+}
+
+/* ============================
+   Session Card
+   ============================ */
+@layer components {
+  .session-card {
+    @apply px-2.5 py-2 bg-tn-bg border border-tn-bg-hl rounded-[5px] cursor-pointer min-w-0;
+    transition: border-color 0.15s, background 0.15s;
+    @apply mobile:px-3.5 mobile:py-3;
+  }
+  .session-card:hover { @apply border-tn-fg-dark bg-tn-bg-hl; }
+  .session-card.active { @apply border-tn-blue; }
+
+  .session-card-header {
+    @apply flex items-center gap-1.5;
+  }
+
+  .session-status { @apply shrink-0; }
+  .session-status.alive { @apply text-tn-green; }
+  .session-status.dead { @apply text-tn-fg-dark; }
+
+  .session-card-name {
+    @apply text-[13px] font-medium text-tn-fg-bright overflow-hidden text-ellipsis whitespace-nowrap flex-1;
+    @apply mobile:text-sm;
+  }
+
+  .session-card-badge {
+    @apply inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[10px] font-bold text-tn-bg shrink-0;
+  }
+  .badge-error { @apply bg-tn-red; }
+  .badge-warning { @apply bg-tn-yellow; }
+  .badge-info { @apply bg-tn-blue; }
+
+  .session-card-meta {
+    @apply text-[11px] text-tn-fg-muted mt-1;
+  }
+
+  .session-card-copy,
+  .session-card-close {
+    @apply text-tn-fg-dark cursor-pointer shrink-0 flex items-center p-0.5 opacity-0;
+    transition: color 0.15s, opacity 0.15s;
+  }
+  .session-card:hover .session-card-copy,
+  .session-card:hover .session-card-close { @apply opacity-100; }
+  .session-card-copy:hover { @apply text-tn-green; }
+  .session-card-close:hover { @apply text-tn-fg-bright; }
+
+  .tmux-card { @apply border-l-2 border-l-tn-green; }
+  .tmux-card:hover { @apply border-tn-green; }
+}
+
+/* ============================
+   Project Card
+   ============================ */
+@layer components {
+  .project-card-wrapper { @apply contents; }
 
   .project-card {
-    padding: 12px 14px;
+    @apply px-2.5 py-2 bg-tn-bg border border-tn-bg-hl border-l-[3px] border-l-tn-purple rounded-[5px] cursor-pointer min-w-0;
+    transition: border-color 0.15s, opacity 0.15s, background 0.15s;
+    @apply mobile:px-3.5 mobile:py-3;
   }
+  .project-card:hover { @apply border-tn-purple bg-tn-bg-hl; }
+  .project-card.launching { @apply opacity-60 pointer-events-none; }
+  .project-card.error { @apply border-l-tn-red border-tn-red; }
+  .project-card.submodule { @apply ml-4 border-l-tn-cyan; }
+  .project-card.submodule:hover { @apply border-tn-cyan; }
+
+  .project-card-header { @apply flex items-center gap-1.5; }
+
+  .project-card-icon { @apply text-tn-fg-muted shrink-0; }
+  .project-card:hover .project-card-icon { @apply text-tn-blue; }
+  .project-card.submodule .project-card-icon { @apply text-tn-fg-dark; }
+  .project-card.submodule:hover .project-card-icon { @apply text-tn-cyan; }
+
+  .project-card-expand {
+    @apply text-tn-fg-muted shrink-0 cursor-pointer flex items-center;
+    transition: color 0.15s;
+  }
+  .project-card-expand:hover { @apply text-tn-fg-bright; }
 
   .project-card-name {
-    font-size: 15px;
+    @apply text-[13px] font-medium text-tn-fg-bright overflow-hidden text-ellipsis whitespace-nowrap flex-1;
+    @apply mobile:text-[15px];
   }
 
   .project-card-pin {
-    opacity: 1;
+    @apply text-tn-fg-dark cursor-pointer shrink-0 flex items-center p-0.5 opacity-0;
+    transition: color 0.15s, opacity 0.15s;
+    @apply mobile:opacity-100;
   }
+  .project-card:hover .project-card-pin,
+  .project-card-pin.pinned { @apply opacity-100; }
+  .project-card-pin.pinned { @apply text-tn-yellow; }
+  .project-card-pin:hover { @apply text-tn-yellow; }
 
-  .session-card {
-    padding: 12px 14px;
-  }
+  .pin-divider { @apply h-px bg-tn-bg-hl my-1; }
+}
 
-  .session-card-name {
-    font-size: 14px;
-  }
-
-  .side-panel-search {
-    padding: 10px 12px;
-    font-size: 14px;
-  }
+/* ============================
+   Launch Options
+   ============================ */
+@layer components {
+  .launch-options { @apply flex gap-1 pb-0.5; }
+  .launch-options.submodule { @apply ml-4; }
 
   .launch-btn {
-    padding: 12px 4px;
-    font-size: 13px;
+    @apply flex-1 flex items-center justify-center gap-1.5 py-[7px] px-1 border border-tn-bg-hl rounded bg-tn-bg text-tn-fg text-[11px] cursor-pointer whitespace-nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    @apply mobile:py-3 mobile:text-[13px];
+  }
+  .launch-btn:hover { @apply bg-tn-surface; }
+  .launch-btn svg { @apply shrink-0; }
+
+  .launch-claude-rc { color: theme(--color-tn-purple); border-color: #bb9af744; }
+  .launch-claude-rc:hover { background: #bb9af71a; border-color: theme(--color-tn-purple); }
+
+  .launch-claude { color: theme(--color-tn-blue); border-color: #7aa2f744; }
+  .launch-claude:hover { background: #7aa2f71a; border-color: theme(--color-tn-blue); }
+
+  .launch-codex { color: theme(--color-tn-yellow); border-color: #e0af6844; }
+  .launch-codex:hover { background: #e0af681a; border-color: theme(--color-tn-yellow); }
+
+  .launch-shell { color: theme(--color-tn-green); border-color: #9ece6a44; }
+  .launch-shell:hover { background: #9ece6a1a; border-color: theme(--color-tn-green); }
+}
+
+/* ============================
+   Spinner
+   ============================ */
+@layer components {
+  .spinning { @apply animate-spin text-tn-purple; }
+}
+
+/* ============================
+   Toast Notifications
+   ============================ */
+@layer components {
+  #toast-container {
+    @apply fixed top-11 right-3 z-[1000] flex flex-col gap-2 max-w-[380px] pointer-events-none;
   }
 
-  .launch-icon {
-    font-size: 12px;
+  .toast {
+    @apply flex items-start gap-2.5 px-3.5 py-3 bg-tn-surface border-l-[3px] border-l-tn-blue rounded-md text-xs pointer-events-auto;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+  .toast-visible { transform: translateX(0); opacity: 1; }
+  .toast-exit { transform: translateX(120%); opacity: 0; }
+
+  .toast-error { @apply border-l-tn-red; }
+  .toast-warning { @apply border-l-tn-yellow; }
+  .toast-info { @apply border-l-tn-blue; }
+
+  .toast-icon {
+    @apply w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 text-tn-bg;
+  }
+  .toast-error .toast-icon { @apply bg-tn-red; }
+  .toast-warning .toast-icon { @apply bg-tn-yellow; }
+  .toast-info .toast-icon { @apply bg-tn-blue; }
+
+  .toast-content { @apply flex-1 min-w-0; }
+  .toast-title { @apply text-tn-fg-bright font-semibold mb-0.5; }
+  .toast-message { @apply text-tn-fg leading-relaxed break-words; }
+
+  .toast-close {
+    @apply bg-transparent border-none text-tn-fg-muted text-base cursor-pointer px-0.5 leading-none shrink-0;
+  }
+  .toast-close:hover { @apply text-tn-fg-bright; }
+}
+
+/* ============================
+   Side Panel Backdrop
+   ============================ */
+@layer components {
+  .side-panel-backdrop {
+    @apply hidden fixed inset-0 z-[99];
+    background: rgba(0, 0, 0, 0.5);
+  }
+  .side-panel-backdrop.visible {
+    @apply mobile:block;
+  }
+}
+
+/* ============================
+   Action Bar (above terminal)
+   ============================ */
+@layer components {
+  .action-bar {
+    @apply flex items-center gap-2 px-3 py-1.5 bg-tn-bg-dark border-b border-tn-bg-hl shrink-0;
+  }
+  .action-bar.hidden { @apply !hidden; }
+
+  .action-bar-cwd {
+    @apply text-[11px] text-tn-fg-muted overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0;
+  }
+
+  .action-bar-buttons {
+    @apply flex gap-1.5 shrink-0;
+  }
+  .action-bar-buttons.busy { @apply opacity-50 pointer-events-none; }
+
+  .action-bar-btn {
+    @apply flex items-center gap-1 px-2.5 py-1 rounded border text-[11px] font-medium cursor-pointer;
+    transition: background 0.15s, border-color 0.15s;
+    @apply mobile:px-3 mobile:py-1.5 mobile:text-xs;
+  }
+  .action-bar-btn svg { @apply shrink-0; }
+
+  .action-bar-radio {
+    @apply bg-transparent text-tn-purple border-tn-purple/30;
+  }
+  .action-bar-radio:hover {
+    @apply bg-tn-purple/10 border-tn-purple;
+  }
+
+  .action-bar-sparkles {
+    @apply bg-transparent text-tn-blue border-tn-blue/30;
+  }
+  .action-bar-sparkles:hover {
+    @apply bg-tn-blue/10 border-tn-blue;
+  }
+
+  .action-bar-zap {
+    @apply bg-transparent text-tn-yellow border-tn-yellow/30;
+  }
+  .action-bar-zap:hover {
+    @apply bg-tn-yellow/10 border-tn-yellow;
+  }
+
+  .action-bar-kill {
+    @apply bg-transparent text-tn-red/60 border-tn-red/20;
+  }
+  .action-bar-kill:hover {
+    @apply text-tn-red bg-tn-red/10 border-tn-red;
+  }
+
+  .action-bar-copy {
+    @apply bg-transparent text-tn-green border-tn-green/30;
+  }
+  .action-bar-copy:hover {
+    @apply bg-tn-green/10 border-tn-green;
+  }
+}
+
+/* ============================
+   Terminal
+   ============================ */
+@layer components {
+  #terminal-container .xterm {
+    @apply h-full p-1;
+    @apply mobile:p-0.5;
+  }
+}
+
+/* ============================
+   Mobile Side Panel Overlay
+   ============================ */
+@layer components {
+  @media (max-width: 600px) {
+    #side-panel.open {
+      @apply !fixed top-0 left-0 !w-full h-full z-[100];
+    }
+
+    #login-screen h1 { @apply text-[22px]; }
+
+    #login-form {
+      @apply flex-col px-6 w-full;
+    }
+    #login-form input { @apply w-full; }
+    #login-form button { @apply w-full; }
   }
 }

@@ -7,7 +7,7 @@ import path from "node:path";
 import { SessionManager } from "./session-manager.js";
 import { login, authMiddleware } from "./auth.js";
 import { handleWebSocket } from "./websocket.js";
-import { listTmuxSessions, tmuxSessionExists, tmuxCapturePane } from "./tmux.js";
+import { listTmuxSessions, tmuxSessionExists, tmuxCapturePane, isTmuxAvailable, createTmuxSession, killTmuxSession } from "./tmux.js";
 import { createExecHandler } from "./exec.js";
 import { createStreamHandler } from "./sse.js";
 import { createSendHandler } from "./send.js";
@@ -50,31 +50,55 @@ app.get("/api/sessions", authMiddleware, (_req, res) => {
 });
 
 app.post("/api/sessions", authMiddleware, async (req, res) => {
-  const { name, cwd, tmuxSession } = req.body || {};
+  const { name, cwd, tmuxSession, createTmux } = req.body || {};
 
-  if (tmuxSession) {
-    const exists = await tmuxSessionExists(tmuxSession);
+  let actualTmuxSession = tmuxSession;
+
+  if (createTmux && !tmuxSession) {
+    // Create a new tmux session, then attach to it
+    const tmuxName = name || `termhub-${Date.now()}`;
+    try {
+      await createTmuxSession(tmuxName, cwd);
+      actualTmuxSession = tmuxName;
+    } catch (err) {
+      // tmux not available or creation failed — fall back to direct PTY
+      actualTmuxSession = undefined;
+    }
+  }
+
+  if (actualTmuxSession) {
+    const exists = await tmuxSessionExists(actualTmuxSession);
     if (!exists) {
-      res.status(404).json({ error: `tmux session '${tmuxSession}' not found` });
+      res.status(404).json({ error: `tmux session '${actualTmuxSession}' not found` });
       return;
     }
   }
 
   try {
-    const session = sessionManager.create(name, { cwd, tmuxSession });
+    const session = sessionManager.create(name, { cwd: actualTmuxSession ? undefined : cwd, tmuxSession: actualTmuxSession });
     res.status(201).json(session.getInfo());
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to create session" });
   }
 });
 
-app.delete("/api/sessions/:id", authMiddleware, (req, res) => {
+app.delete("/api/sessions/:id", authMiddleware, async (req, res) => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const session = sessionManager.get(id);
+  const tmuxName = session?.tmuxSession;
+  const killTmux = req.query.killTmux === "true";
+
   const deleted = sessionManager.delete(id);
   if (!deleted) {
     res.status(404).json({ error: "Session not found" });
     return;
   }
+
+  // Kill tmux session if requested
+  if (killTmux && tmuxName) {
+    await killTmuxSession(tmuxName);
+  }
+
   res.json({ ok: true });
 });
 
@@ -93,10 +117,12 @@ app.get("/api/tmux-sessions", authMiddleware, async (_req, res) => {
 
 // --- Projects API ---
 app.get("/api/projects", authMiddleware, async (_req, res) => {
-  const [projects, favorites] = await Promise.all([listProjects(), getFavorites()]);
+  const [projects, favorites, tmuxAvailable] = await Promise.all([
+    listProjects(), getFavorites(), isTmuxAvailable(),
+  ]);
   const favSet = new Set(favorites);
   const enriched = projects.map((p) => ({ ...p, pinned: favSet.has(p.path) }));
-  res.json(enriched);
+  res.json({ projects: enriched, tmuxAvailable });
 });
 
 // --- Favorites API ---

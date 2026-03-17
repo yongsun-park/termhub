@@ -7,6 +7,7 @@ import {
   type ProjectInfo,
   type LaunchMode,
 } from "./side-panel.js";
+import { ActionBar } from "./action-bar.js";
 import { ToastManager } from "./toast.js";
 import { NotificationManager } from "./notifications.js";
 import "@xterm/xterm/css/xterm.css";
@@ -27,6 +28,7 @@ const tabBarEl = document.getElementById("tab-bar")!;
 const terminalContainer = document.getElementById("terminal-container")!;
 const sidePanelEl = document.getElementById("side-panel")!;
 const panelToggleBtn = document.getElementById("panel-toggle")!;
+const terminalAreaEl = document.getElementById("terminal-area")!;
 
 // --- Managers ---
 const toastManager = new ToastManager();
@@ -66,9 +68,36 @@ const tabBar = new TabBar(tabBarEl, {
 // --- Side panel ---
 const sidePanel = new SidePanel(sidePanelEl, panelToggleBtn, {
   onSelectSession: (id) => switchSession(id),
+  onCloseSession: (id, killTmux) => closeSession(id, killTmux),
   onAttachTmux: (name) => attachTmuxSession(name),
   onLaunchProject: (project, mode) => launchProject(project, mode),
   onTogglePin: (path, pinned) => togglePin(path, pinned),
+});
+
+// --- Action Bar ---
+const actionBar = new ActionBar(terminalAreaEl, {
+  onSendCommand: async (command, waitForIdle) => {
+    if (!currentSessionId) return;
+    try {
+      await api(`/api/sessions/${currentSessionId}/send`, {
+        method: "POST",
+        body: JSON.stringify({
+          text: command,
+          waitForIdle,
+          timeoutMs: waitForIdle ? 60000 : 5000,
+        }),
+      });
+      actionBar.setBusy(false);
+      toastManager.show({ severity: "info", title: "Command", message: `${command} sent` });
+    } catch {
+      actionBar.setBusy(false);
+      toastManager.show({ severity: "warning", title: "Command", message: "Command may have failed — check terminal" });
+    }
+  },
+  onKillSession: () => {
+    if (!currentSessionId) return;
+    closeSession(currentSessionId, true);
+  },
 });
 
 // --- WebSocket ---
@@ -160,7 +189,7 @@ function wsSend(msg: Record<string, unknown>): void {
 }
 
 // --- Session management ---
-async function createSession(options?: { cwd?: string; name?: string }): Promise<SessionInfo> {
+async function createSession(options?: { cwd?: string; name?: string; createTmux?: boolean }): Promise<SessionInfo> {
   const session = await api<SessionInfo>("/api/sessions", {
     method: "POST",
     body: options ? JSON.stringify(options) : undefined,
@@ -223,11 +252,28 @@ function switchSession(id: string): void {
 
   const { cols, rows } = handle.terminal;
   wsSend({ type: "resize", cols, rows });
+
+  // Update action bar with session info
+  updateActionBar(id);
 }
 
-async function closeSession(id: string): Promise<void> {
+function updateActionBar(sessionId: string): void {
+  api<SessionCardInfo[]>("/api/sessions")
+    .then((sessions) => {
+      const session = sessions.find((s) => s.id === sessionId);
+      if (session) {
+        actionBar.update(session.cwd, session.alive, session.tmuxSession, session.name);
+      } else {
+        actionBar.hide();
+      }
+    })
+    .catch(() => actionBar.hide());
+}
+
+async function closeSession(id: string, killTmux = false): Promise<void> {
   try {
-    await api(`/api/sessions/${id}`, { method: "DELETE" });
+    const query = killTmux ? "?killTmux=true" : "";
+    await api(`/api/sessions/${id}${query}`, { method: "DELETE" });
   } catch {
     // Session may already be gone on server
   }
@@ -258,12 +304,14 @@ const MODE_LABELS: Record<LaunchMode, string> = {
   shell: "Shell",
   claude: "Claude",
   "claude-rc": "Claude RC",
+  codex: "Codex",
 };
 
-const MODE_COMMANDS: Record<LaunchMode, string | null> = {
+const MODE_COMMANDS: Record<LaunchMode, { text: string; waitForIdle: boolean } | null> = {
   shell: null,
-  claude: "claude",
-  "claude-rc": "claude --remote-control",
+  claude: { text: "claude", waitForIdle: true },
+  "claude-rc": { text: "claude --remote-control", waitForIdle: false },
+  codex: { text: "codex", waitForIdle: true },
 };
 
 async function launchProject(project: ProjectInfo, mode: LaunchMode): Promise<void> {
@@ -272,7 +320,10 @@ async function launchProject(project: ProjectInfo, mode: LaunchMode): Promise<vo
   sidePanel.setProjectLaunching(project.path);
 
   // Check for existing session with same cwd and mode prefix
-  const prefix = mode === "shell" ? "shell:" : mode === "claude" ? "claude:" : "claude-rc:";
+  const prefixes: Record<LaunchMode, string> = {
+    shell: "shell/", claude: "claude/", "claude-rc": "claude-rc/", codex: "codex/",
+  };
+  const prefix = prefixes[mode];
   try {
     const sessions = await api<SessionCardInfo[]>("/api/sessions");
     const existing = sessions.find(
@@ -313,14 +364,19 @@ async function launchProject(project: ProjectInfo, mode: LaunchMode): Promise<vo
     const session = await createSession({
       cwd: project.path,
       name: `${prefix}${project.name}`,
+      createTmux: tmuxAvailable,
     });
 
-    const command = MODE_COMMANDS[mode];
-    if (command) {
+    const cmd = MODE_COMMANDS[mode];
+    if (cmd) {
       try {
         await api(`/api/sessions/${session.id}/send`, {
           method: "POST",
-          body: JSON.stringify({ text: command, waitForIdle: true, timeoutMs: 60000 }),
+          body: JSON.stringify({
+            text: cmd.text,
+            waitForIdle: cmd.waitForIdle,
+            timeoutMs: cmd.waitForIdle ? 60000 : 5000,
+          }),
         });
       } catch {
         toastManager.show({
@@ -363,10 +419,13 @@ function refreshTmuxSessions(): void {
     .catch(() => sidePanel.setTmuxSessions([]));
 }
 
+let tmuxAvailable = false;
+
 async function loadProjects(): Promise<void> {
   try {
-    const projects = await api<ProjectInfo[]>("/api/projects");
-    sidePanel.setProjects(projects);
+    const result = await api<{ projects: ProjectInfo[]; tmuxAvailable: boolean }>("/api/projects");
+    tmuxAvailable = result.tmuxAvailable;
+    sidePanel.setProjects(result.projects);
   } catch {
     sidePanel.setProjectsError();
   }
@@ -424,13 +483,17 @@ async function attachTmuxSession(tmuxName: string): Promise<void> {
 
 // --- Login ---
 function showLogin(): void {
-  loginScreen.style.display = "flex";
-  appScreen.style.display = "none";
+  loginScreen.classList.remove("hidden");
+  loginScreen.classList.add("flex");
+  appScreen.classList.remove("flex");
+  appScreen.classList.add("hidden");
 }
 
 function showApp(): void {
-  loginScreen.style.display = "none";
-  appScreen.style.display = "flex";
+  loginScreen.classList.remove("flex");
+  loginScreen.classList.add("hidden");
+  appScreen.classList.remove("hidden");
+  appScreen.classList.add("flex");
 }
 
 loginForm.addEventListener("submit", async (e) => {

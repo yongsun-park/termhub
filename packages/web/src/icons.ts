@@ -16,6 +16,8 @@ import {
   Search,
   Sparkles,
   Radio,
+  ClipboardCopy,
+  Check,
 } from "lucide";
 
 const ICONS = {
@@ -35,6 +37,8 @@ const ICONS = {
   search: Search,
   sparkles: Sparkles,
   radio: Radio,
+  clipboard: ClipboardCopy,
+  check: Check,
 } as const;
 
 export type IconName = keyof typeof ICONS;
