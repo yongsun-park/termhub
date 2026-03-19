@@ -519,6 +519,50 @@ loginForm.addEventListener("submit", async (e) => {
   }
 });
 
+// --- Font size control ---
+const FONT_SIZE_KEY = "termhub_fontsize";
+const DEFAULT_FONT_SIZE = 16;
+const MIN_FONT_SIZE = 12;
+const MAX_FONT_SIZE = 24;
+const STEP = 2;
+
+let currentFontSize = parseInt(localStorage.getItem(FONT_SIZE_KEY) || String(DEFAULT_FONT_SIZE), 10);
+applyFontSize(currentFontSize);
+
+function applyFontSize(size: number): void {
+  currentFontSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, size));
+  document.documentElement.style.fontSize = `${currentFontSize}px`;
+  localStorage.setItem(FONT_SIZE_KEY, String(currentFontSize));
+  // Terminal font = UI - 2 (monospace glyphs are wider, so same px looks bigger)
+  const termSize = Math.max(10, window.innerWidth <= 600 ? currentFontSize - 4 : currentFontSize - 2);
+  for (const handle of terminalHandles.values()) {
+    handle.terminal.options.fontSize = termSize;
+    handle.fitAddon.fit();
+  }
+}
+
+function setupFontSizeControls(): void {
+  const wrapper = document.createElement("div");
+  wrapper.className = "font-size-controls";
+
+  const decBtn = document.createElement("button");
+  decBtn.className = "font-size-btn";
+  decBtn.textContent = "A-";
+  decBtn.title = "Decrease font size";
+  decBtn.addEventListener("click", () => applyFontSize(currentFontSize - STEP));
+
+  const incBtn = document.createElement("button");
+  incBtn.className = "font-size-btn";
+  incBtn.textContent = "A+";
+  incBtn.title = "Increase font size";
+  incBtn.addEventListener("click", () => applyFontSize(currentFontSize + STEP));
+
+  wrapper.appendChild(decBtn);
+  wrapper.appendChild(incBtn);
+
+  tabBarEl.appendChild(wrapper);
+}
+
 // --- Server info ---
 async function loadServerInfo(): Promise<void> {
   try {
@@ -541,6 +585,7 @@ async function initApp(): Promise<void> {
 
   loadProjects();
   loadServerInfo();
+  setupFontSizeControls();
 
   try {
     const sessions = await api<SessionInfo[]>("/api/sessions");

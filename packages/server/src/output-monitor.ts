@@ -50,6 +50,11 @@ export class OutputMonitor {
   private lastAlertTime = new Map<string, number>();
   private flushTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
+  // Rate limiter: max alerts per session per time window
+  private alertCounts = new Map<string, { count: number; resetAt: number }>();
+  private static MAX_ALERTS_PER_WINDOW = 3;
+  private static WINDOW_MS = 5000;
+
   constructor(patterns?: AlertPattern[]) {
     this.patterns = patterns ?? [...DEFAULT_PATTERNS];
   }
@@ -83,6 +88,17 @@ export class OutputMonitor {
     this.flushTimers.set(sessionId, timer);
   }
 
+  private isRateLimited(sessionId: string): boolean {
+    const now = Date.now();
+    const entry = this.alertCounts.get(sessionId);
+    if (!entry || now >= entry.resetAt) {
+      this.alertCounts.set(sessionId, { count: 1, resetAt: now + OutputMonitor.WINDOW_MS });
+      return false;
+    }
+    entry.count++;
+    return entry.count > OutputMonitor.MAX_ALERTS_PER_WINDOW;
+  }
+
   private matchLine(sessionId: string, line: string): void {
     for (const pat of this.patterns) {
       if (pat.pattern.test(line)) {
@@ -90,6 +106,7 @@ export class OutputMonitor {
         const now = Date.now();
         const last = this.lastAlertTime.get(debounceKey) ?? 0;
         if (pat.debounceMs && now - last < pat.debounceMs) continue;
+        if (this.isRateLimited(sessionId)) return;
         this.lastAlertTime.set(debounceKey, now);
 
         const alert: Alert = {

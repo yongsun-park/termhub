@@ -76,6 +76,18 @@
     @apply text-[10px] text-tn-fg-dark bg-tn-bg-hl px-2 py-0.5 rounded-full ml-auto mr-1 shrink-0 select-none;
   }
 
+  .font-size-controls {
+    @apply flex gap-0.5 shrink-0 mr-1;
+  }
+
+  .font-size-btn {
+    @apply px-1.5 py-0.5 text-[10px] font-semibold text-tn-fg-muted bg-transparent border border-tn-bg-hl rounded cursor-pointer select-none;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .font-size-btn:hover {
+    @apply text-tn-fg-bright border-tn-fg-dark;
+  }
+
   .tab-badge {
     @apply inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[10px] font-bold text-tn-bg leading-none;
   }

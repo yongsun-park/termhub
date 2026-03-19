@@ -88,6 +88,7 @@ export class TabBar {
     // Preserve persistent elements
     const toggleBtn = this.container.querySelector("#panel-toggle");
     const serverBadge = this.container.querySelector(".server-badge");
+    const fontControls = this.container.querySelector(".font-size-controls");
     this.container.innerHTML = "";
     if (toggleBtn) this.container.appendChild(toggleBtn);
 
@@ -135,6 +136,7 @@ export class TabBar {
     this.container.appendChild(addBtn);
 
     if (serverBadge) this.container.appendChild(serverBadge);
+    if (fontControls) this.container.appendChild(fontControls);
   }
 
   private setupKeyboardShortcuts(): void {

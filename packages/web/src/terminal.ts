@@ -10,8 +10,10 @@ export interface TerminalHandle {
   dispose(): void;
 }
 
-function getTerminalFontSize(): number {
-  return window.innerWidth <= 600 ? 11 : 14;
+export function getTerminalFontSize(): number {
+  const saved = parseInt(localStorage.getItem("termhub_fontsize") || "16", 10);
+  const base = window.innerWidth <= 600 ? saved - 4 : saved - 2;
+  return Math.max(10, base);
 }
 
 export function createTerminal(): TerminalHandle {
