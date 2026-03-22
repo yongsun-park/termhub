@@ -41,7 +41,8 @@ async function parseSubmodules(projectPath: string): Promise<ProjectInfo[]> {
 
 export async function listProjects(): Promise<ProjectInfo[]> {
   const raw = process.env.TERMHUB_PROJECTS || path.join(homedir(), "repositories");
-  const baseDirs = raw.split(":").map((d) => d.trim()).filter(Boolean);
+  const baseDirs = raw.split(":").map((d) => d.trim()).filter(Boolean)
+    .map((d) => d.startsWith("~") ? path.join(homedir(), d.slice(1)) : d);
 
   const results: ProjectInfo[] = [];
 
