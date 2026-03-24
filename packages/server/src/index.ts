@@ -51,7 +51,7 @@ app.get("/api/sessions", authMiddleware, (_req, res) => {
 });
 
 app.post("/api/sessions", authMiddleware, async (req, res) => {
-  const { name, cwd, tmuxSession, createTmux } = req.body || {};
+  const { name, cwd, tmuxSession, createTmux, command } = req.body || {};
 
   let actualTmuxSession = tmuxSession;
 
@@ -76,7 +76,11 @@ app.post("/api/sessions", authMiddleware, async (req, res) => {
   }
 
   try {
-    const session = sessionManager.create(name, { cwd: actualTmuxSession ? undefined : cwd, tmuxSession: actualTmuxSession });
+    const session = sessionManager.create(name, {
+      cwd: actualTmuxSession ? undefined : cwd,
+      tmuxSession: actualTmuxSession,
+      command: typeof command === "string" ? command : undefined,
+    });
     res.status(201).json(session.getInfo());
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to create session" });

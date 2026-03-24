@@ -7,6 +7,7 @@ const OUTPUT_BUFFER_MAX = 100_000;
 export interface TerminalSessionOptions {
   cwd?: string;
   tmuxSession?: string;
+  command?: string;
 }
 
 export interface TerminalSessionInfo {
@@ -71,6 +72,18 @@ export class TerminalSession {
         listener(exitCode);
       }
     });
+
+    if (options?.command) {
+      const cmd = options.command;
+      if (this.tmuxSession) {
+        const cleanup = this.onData(() => {
+          cleanup();
+          setTimeout(() => this.write(cmd + "\n"), 500);
+        });
+      } else {
+        setTimeout(() => this.write(cmd + "\n"), 300);
+      }
+    }
   }
 
   private appendOutput(data: string): void {

@@ -104,6 +104,7 @@ const actionBar = new ActionBar(terminalAreaEl, {
         cwd: "~/.termhub/templates",
         name: "template-manager",
         createTmux: tmuxAvailable,
+        command: "claude",
       });
       toastManager.show({ severity: "info", title: "Templates", message: "Template manager opened — ask Claude to create/edit templates" });
     } catch {
@@ -212,7 +213,7 @@ function wsSend(msg: Record<string, unknown>): void {
 }
 
 // --- Session management ---
-async function createSession(options?: { cwd?: string; name?: string; createTmux?: boolean }): Promise<SessionInfo> {
+async function createSession(options?: { cwd?: string; name?: string; createTmux?: boolean; command?: string }): Promise<SessionInfo> {
   const session = await api<SessionInfo>("/api/sessions", {
     method: "POST",
     body: options ? JSON.stringify(options) : undefined,
