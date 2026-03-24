@@ -74,7 +74,7 @@ export class ActionBar {
     this.copyBtn.className = "action-bar-btn action-bar-copy";
     this.copyBtn.appendChild(icon("clipboard", 12));
     const copyText = document.createElement("span");
-    copyText.textContent = "SSH";
+    copyText.textContent = "copy-tmux";
     this.copyBtn.appendChild(copyText);
     this.copyBtn.title = "Copy SSH + tmux attach command";
     this.copyBtn.addEventListener("click", () => this.copyAttachCommand());
@@ -239,7 +239,7 @@ export class ActionBar {
         this.copyBtn.innerHTML = "";
         this.copyBtn.appendChild(icon("clipboard", 12));
         const t = document.createElement("span");
-        t.textContent = "SSH";
+        t.textContent = "copy-tmux";
         this.copyBtn.appendChild(t);
       }, 1500);
     });
