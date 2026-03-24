@@ -26,13 +26,11 @@ export interface ProjectInfo {
   submodules?: ProjectInfo[];
 }
 
-export type LaunchMode = "shell" | "claude" | "claude-rc" | "codex";
-
 export interface SidePanelCallbacks {
   onSelectSession(sessionId: string): void;
   onCloseSession(sessionId: string, killTmux: boolean): void;
   onAttachTmux(sessionName: string): void;
-  onLaunchProject(project: ProjectInfo, mode: LaunchMode): void;
+  onLaunchProject(project: ProjectInfo): void;
   onTogglePin(projectPath: string, pinned: boolean): void;
 }
 
@@ -408,40 +406,10 @@ export class SidePanel {
 
     card.addEventListener("click", () => {
       if (state === "launching") return;
-      this.selectedProject = this.selectedProject === project.path ? null : project.path;
-      this.renderProjects();
+      this.callbacks.onLaunchProject(project);
     });
 
     wrapper.appendChild(card);
-
-    // Launch options
-    if (this.selectedProject === project.path && state !== "launching") {
-      const options = document.createElement("div");
-      options.className = `launch-options${isSub ? " submodule" : ""}`;
-
-      const modes: { mode: LaunchMode; label: string; iconName: "sparkles" | "zap" | "terminal" }[] = [
-        { mode: "claude", label: "Claude", iconName: "sparkles" },
-        { mode: "codex", label: "Codex", iconName: "zap" },
-        { mode: "shell", label: "Shell", iconName: "terminal" },
-      ];
-
-      for (const { mode, label, iconName } of modes) {
-        const btn = document.createElement("button");
-        btn.className = `launch-btn launch-${mode}`;
-        btn.appendChild(icon(iconName, 13));
-        const text = document.createElement("span");
-        text.textContent = label;
-        btn.appendChild(text);
-        btn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          this.callbacks.onLaunchProject(project, mode);
-        });
-        options.appendChild(btn);
-      }
-
-      wrapper.appendChild(options);
-    }
-
     return wrapper;
   }
 

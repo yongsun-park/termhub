@@ -5,7 +5,6 @@ import {
   type SessionCardInfo,
   type TmuxSessionCardInfo,
   type ProjectInfo,
-  type LaunchMode,
 } from "./side-panel.js";
 import { ActionBar } from "./action-bar.js";
 import { ToastManager } from "./toast.js";
@@ -70,7 +69,7 @@ const sidePanel = new SidePanel(sidePanelEl, panelToggleBtn, {
   onSelectSession: (id) => switchSession(id),
   onCloseSession: (id, killTmux) => closeSession(id, killTmux),
   onAttachTmux: (name) => attachTmuxSession(name),
-  onLaunchProject: (project, mode) => launchProject(project, mode),
+  onLaunchProject: (project) => launchProject(project),
   onTogglePin: (path, pinned) => togglePin(path, pinned),
 });
 
@@ -323,35 +322,17 @@ async function closeSession(id: string, killTmux = false): Promise<void> {
   }
 }
 
-// --- Unified project launcher ---
-const MODE_LABELS: Record<LaunchMode, string> = {
-  shell: "Shell",
-  claude: "Claude",
-  "claude-rc": "Claude RC",
-  codex: "Codex",
-};
-
-const MODE_COMMANDS: Record<LaunchMode, { text: string; waitForIdle: boolean } | null> = {
-  shell: null,
-  claude: { text: "claude", waitForIdle: true },
-  "claude-rc": { text: "claude --remote-control", waitForIdle: false },
-  codex: { text: "codex", waitForIdle: true },
-};
-
-async function launchProject(project: ProjectInfo, mode: LaunchMode): Promise<void> {
+// --- Project launcher ---
+async function launchProject(project: ProjectInfo): Promise<void> {
   if (sidePanel.isProjectLaunching(project.path)) return;
 
   sidePanel.setProjectLaunching(project.path);
 
-  // Check for existing session with same cwd and mode prefix
-  const prefixes: Record<LaunchMode, string> = {
-    shell: "shell/", claude: "claude/", "claude-rc": "claude-rc/", codex: "codex/",
-  };
-  const prefix = prefixes[mode];
+  // Check for existing session with same cwd
   try {
     const sessions = await api<SessionCardInfo[]>("/api/sessions");
     const existing = sessions.find(
-      (s) => s.cwd === project.path && s.alive && s.name.startsWith(prefix)
+      (s) => s.cwd === project.path && s.alive
     );
     if (existing) {
       if (terminalHandles.has(existing.id)) {
@@ -375,7 +356,7 @@ async function launchProject(project: ProjectInfo, mode: LaunchMode): Promise<vo
       }
       if (isMobile()) sidePanel.close();
       sidePanel.clearProjectState(project.path);
-      toastManager.show({ severity: "info", title: project.name, message: `Switched to existing ${MODE_LABELS[mode]} session` });
+      toastManager.show({ severity: "info", title: project.name, message: "Switched to existing session" });
       return;
     }
   } catch {
@@ -385,36 +366,14 @@ async function launchProject(project: ProjectInfo, mode: LaunchMode): Promise<vo
   if (isMobile()) sidePanel.close();
 
   try {
-    const session = await createSession({
+    await createSession({
       cwd: project.path,
-      name: `${prefix}${project.name}`,
+      name: project.name,
       createTmux: tmuxAvailable,
     });
 
-    const cmd = MODE_COMMANDS[mode];
-    if (cmd) {
-      try {
-        await api(`/api/sessions/${session.id}/send`, {
-          method: "POST",
-          body: JSON.stringify({
-            text: cmd.text,
-            waitForIdle: cmd.waitForIdle,
-            timeoutMs: cmd.waitForIdle ? 60000 : 5000,
-          }),
-        });
-      } catch {
-        toastManager.show({
-          severity: "warning",
-          title: project.name,
-          message: `${MODE_LABELS[mode]} launch may have failed — check terminal`,
-        });
-        sidePanel.clearProjectState(project.path);
-        return;
-      }
-    }
-
     sidePanel.clearProjectState(project.path);
-    toastManager.show({ severity: "info", title: project.name, message: `${MODE_LABELS[mode]} ready` });
+    toastManager.show({ severity: "info", title: project.name, message: "Session ready" });
   } catch (err) {
     sidePanel.setProjectError(project.path);
     toastManager.show({
