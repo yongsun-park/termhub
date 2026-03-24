@@ -384,13 +384,6 @@
   }
   .action-bar-btn svg { @apply shrink-0; }
 
-  .action-bar-radio {
-    @apply bg-transparent text-tn-purple border-tn-purple/30;
-  }
-  .action-bar-radio:hover {
-    @apply bg-tn-purple/10 border-tn-purple;
-  }
-
   .action-bar-sparkles {
     @apply bg-transparent text-tn-blue border-tn-blue/30;
   }

@@ -42,7 +42,6 @@ export class ActionBar {
     this.buttonsEl = document.createElement("div");
     this.buttonsEl.className = "action-bar-buttons";
 
-    this.buttonsEl.appendChild(this.createButton("Claude RC", "radio", "claude --remote-control", false));
     this.buttonsEl.appendChild(this.createButton("Claude", "sparkles", "claude", true));
     this.buttonsEl.appendChild(this.createButton("Codex", "zap", "codex", true));
 

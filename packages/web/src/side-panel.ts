@@ -419,8 +419,7 @@ export class SidePanel {
       const options = document.createElement("div");
       options.className = `launch-options${isSub ? " submodule" : ""}`;
 
-      const modes: { mode: LaunchMode; label: string; iconName: "radio" | "sparkles" | "zap" | "terminal" }[] = [
-        { mode: "claude-rc", label: "Claude RC", iconName: "radio" },
+      const modes: { mode: LaunchMode; label: string; iconName: "sparkles" | "zap" | "terminal" }[] = [
         { mode: "claude", label: "Claude", iconName: "sparkles" },
         { mode: "codex", label: "Codex", iconName: "zap" },
         { mode: "shell", label: "Shell", iconName: "terminal" },
