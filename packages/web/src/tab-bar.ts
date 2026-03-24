@@ -16,9 +16,9 @@ export interface TabBarCallbacks {
 type Severity = "error" | "warning" | "info";
 
 const TOOL_INDICATORS: Record<DetectedTool, { symbol: string; color: string }> = {
-  claude: { symbol: "●", color: "var(--color-tn-blue)" },
-  codex: { symbol: "●", color: "var(--color-tn-yellow)" },
-  shell: { symbol: "●", color: "var(--color-tn-fg-dark)" },
+  claude: { symbol: "✳", color: "var(--color-tn-yellow)" },
+  codex: { symbol: "⚡", color: "var(--color-tn-cyan)" },
+  shell: { symbol: ">_", color: "var(--color-tn-fg-dark)" },
 };
 
 function severityRank(s: string): number {
@@ -94,10 +94,13 @@ export class TabBar {
   }
 
   setToolState(sessionId: string, tool: DetectedTool): void {
-    const prev = this.toolStates.get(sessionId);
-    if (prev !== tool) {
-      this.toolStates.set(sessionId, tool);
-      this.render();
+    this.toolStates.set(sessionId, tool);
+    // Update dot color without full re-render
+    const tabEl = this.container.querySelector(`[data-id="${sessionId}"] .tab-tool-dot`) as HTMLElement | null;
+    if (tabEl) {
+      const indicator = TOOL_INDICATORS[tool];
+      tabEl.style.color = indicator.color;
+      tabEl.title = tool;
     }
   }
 

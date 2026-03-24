@@ -48,12 +48,16 @@ const AWAITING_INPUT_PATTERNS = [
 ];
 
 function detectTool(lines: string[]): DetectedTool {
-  // Check last 30 lines for tool indicators
+  // Check broader context for tool identity (not just last few lines)
+  const all = lines.join("\n");
   const tail = lines.slice(-30).join("\n");
-  // Claude Code indicators
-  if (/\? for shortcuts/.test(tail) || /Claude Code/.test(tail) || /❯/.test(tail)) return "claude";
-  // Codex indicators
-  if (/context left/.test(tail) || /›/.test(lines.slice(-15).join("\n"))) return "codex";
+
+  // Codex indicators (check first — more specific)
+  if (/context left/.test(tail) || /Codex/.test(all)) return "codex";
+
+  // Claude Code indicators (specific patterns, not just ❯ which shells also use)
+  if (/\? for shortcuts/.test(tail) || /Claude Code/.test(all) || /·\s*\/effort/.test(tail)) return "claude";
+
   return "shell";
 }
 

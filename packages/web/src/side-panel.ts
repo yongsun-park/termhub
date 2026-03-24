@@ -278,11 +278,42 @@ export class SidePanel {
   }
 
   setToolState(sessionId: string, tool: DetectedTool): void {
-    const prev = this.toolStates.get(sessionId);
-    if (prev !== tool) {
-      this.toolStates.set(sessionId, tool);
-      this.renderActive();
-    }
+    this.toolStates.set(sessionId, tool);
+    this.renderActive();
+  }
+
+  private showCloseMenu(e: MouseEvent, sessionId: string): void {
+    // Remove existing menu
+    document.querySelector(".session-close-menu")?.remove();
+
+    const menu = document.createElement("div");
+    menu.className = "session-close-menu";
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
+
+    const detachBtn = document.createElement("div");
+    detachBtn.className = "session-close-menu-item";
+    detachBtn.textContent = "Detach";
+    detachBtn.addEventListener("click", () => {
+      this.callbacks.onCloseSession(sessionId, false);
+      menu.remove();
+    });
+    menu.appendChild(detachBtn);
+
+    const killBtn = document.createElement("div");
+    killBtn.className = "session-close-menu-item session-close-menu-kill";
+    killBtn.textContent = "Kill";
+    killBtn.addEventListener("click", () => {
+      this.callbacks.onCloseSession(sessionId, true);
+      menu.remove();
+    });
+    menu.appendChild(killBtn);
+
+    document.body.appendChild(menu);
+
+    // Close on outside click
+    const close = () => { menu.remove(); document.removeEventListener("click", close); };
+    setTimeout(() => document.addEventListener("click", close), 0);
   }
 
   clearBadge(sessionId: string): void {
@@ -479,14 +510,18 @@ export class SidePanel {
         header.appendChild(copyBtn);
       }
 
-      // Detach / close button
+      // Close button
       const closeBtn = document.createElement("span");
       closeBtn.className = "session-card-close";
       closeBtn.appendChild(icon("x", 12));
-      closeBtn.title = session.tmuxSession ? "Detach (keep tmux alive)" : "Close session";
+      closeBtn.title = "Close session";
       closeBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        this.callbacks.onCloseSession(session.id, false);
+        if (session.tmuxSession) {
+          this.showCloseMenu(e, session.id);
+        } else {
+          this.callbacks.onCloseSession(session.id, false);
+        }
       });
       header.appendChild(closeBtn);
 

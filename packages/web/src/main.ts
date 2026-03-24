@@ -307,6 +307,8 @@ async function closeSession(id: string, killTmux = false): Promise<void> {
     terminalHandles.delete(id);
   }
   tabBar.removeTab(id);
+  // Small delay to let server process the deletion before refreshing
+  await new Promise((r) => setTimeout(r, 300));
   refreshSidePanel();
   refreshTmuxSessions();
   if (currentSessionId === id) {
@@ -506,19 +508,21 @@ loginForm.addEventListener("submit", async (e) => {
 async function pollSessionTools(): Promise<void> {
   try {
     const sessions = await api<SessionCardInfo[]>("/api/sessions");
+    console.log("[poll] sessions:", sessions.length);
     for (const session of sessions) {
       if (!session.alive) continue;
       try {
         const status = await api<{ state: string; tool: string }>(`/api/sessions/${session.id}/status`);
+        console.log("[poll]", session.id, session.name, "→", status.tool, status.state);
         const tool = (status.tool || "shell") as "claude" | "codex" | "shell";
         tabBar.setToolState(session.id, tool);
         sidePanel.setToolState(session.id, tool);
-      } catch {
-        // skip unreachable sessions
+      } catch (err) {
+        console.error("[poll] status error:", session.id, err);
       }
     }
-  } catch {
-    // non-critical
+  } catch (err) {
+    console.error("[poll] sessions error:", err);
   }
 }
 

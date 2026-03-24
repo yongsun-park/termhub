@@ -196,9 +196,22 @@
 
   .session-status { @apply shrink-0; }
   .session-status.alive { @apply text-tn-green; }
-  .session-status.tool-claude { @apply text-tn-blue; }
-  .session-status.tool-codex { @apply text-tn-yellow; }
-  .session-status.tool-shell { @apply text-tn-green; }
+  .session-close-menu {
+    @apply fixed z-50 bg-tn-bg-dark border border-tn-bg-hl rounded shadow-lg overflow-hidden;
+  }
+  .session-close-menu-item {
+    @apply px-3 py-1.5 text-xs text-tn-fg cursor-pointer;
+    transition: background 0.1s;
+    &:hover { @apply bg-tn-bg-hl; }
+  }
+  .session-close-menu-kill {
+    @apply text-tn-red;
+    &:hover { @apply bg-tn-red/10; }
+  }
+
+  .session-status.tool-claude { @apply text-tn-yellow; }
+  .session-status.tool-codex { @apply text-tn-cyan; }
+  .session-status.tool-shell { @apply text-tn-fg-dark; }
   .session-status.dead { @apply text-tn-fg-dark; }
 
   .session-card-name {
