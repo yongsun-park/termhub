@@ -120,6 +120,16 @@ app.get("/api/tmux-sessions", authMiddleware, async (_req, res) => {
   res.json(enriched);
 });
 
+app.delete("/api/tmux-sessions/:name", authMiddleware, async (req, res) => {
+  const name = req.params.name;
+  const killed = await killTmuxSession(typeof name === "string" ? name : name[0]);
+  if (!killed) {
+    res.status(404).json({ error: "tmux session not found" });
+    return;
+  }
+  res.json({ ok: true });
+});
+
 // --- Server Info ---
 import { hostname } from "node:os";
 app.get("/api/info", authMiddleware, (_req, res) => {

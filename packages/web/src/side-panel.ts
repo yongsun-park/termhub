@@ -31,6 +31,7 @@ export interface SidePanelCallbacks {
   onSelectSession(sessionId: string): void;
   onCloseSession(sessionId: string, killTmux: boolean): void;
   onAttachTmux(sessionName: string): void;
+  onKillTmux(sessionName: string): void;
   onLaunchProject(project: ProjectInfo): void;
   onTogglePin(projectPath: string, pinned: boolean): void;
 }
@@ -546,36 +547,54 @@ export class SidePanel {
 
     // Unattached tmux sessions
     const unattachedTmux = this.tmuxSessions.filter((t) => !t.termhubAttached);
-    for (const tmux of unattachedTmux) {
-      const card = document.createElement("div");
-      card.className = "session-card tmux-card";
+    if (unattachedTmux.length > 0) {
+      const divider = document.createElement("div");
+      divider.className = "session-section-label";
+      divider.textContent = "Detached tmux";
+      this.activeListEl.appendChild(divider);
 
-      const header = document.createElement("div");
-      header.className = "session-card-header";
+      for (const tmux of unattachedTmux) {
+        const card = document.createElement("div");
+        card.className = "session-card tmux-card";
 
-      const tmuxIcon = icon("terminal", 12);
-      tmuxIcon.classList.add("session-status", "alive");
-      header.appendChild(tmuxIcon);
+        const header = document.createElement("div");
+        header.className = "session-card-header";
 
-      const name = document.createElement("span");
-      name.className = "session-card-name";
-      name.textContent = tmux.name;
-      header.appendChild(name);
+        const tmuxIcon = icon("terminal", 12);
+        tmuxIcon.classList.add("session-status", "tmux-detached");
+        header.appendChild(tmuxIcon);
 
-      card.appendChild(header);
+        const name = document.createElement("span");
+        name.className = "session-card-name tmux-detached-name";
+        name.textContent = tmux.name;
+        header.appendChild(name);
 
-      const meta = document.createElement("div");
-      meta.className = "session-card-meta";
-      const time = new Date(tmux.created);
-      const timeStr = time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      meta.textContent = `${tmux.windows} win · ${timeStr} · tmux`;
-      card.appendChild(meta);
+        // Kill button for detached tmux
+        const killBtn = document.createElement("span");
+        killBtn.className = "session-card-close";
+        killBtn.appendChild(icon("x", 12));
+        killBtn.title = "Kill tmux session";
+        killBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.callbacks.onKillTmux(tmux.name);
+        });
+        header.appendChild(killBtn);
 
-      card.addEventListener("click", () => {
-        this.callbacks.onAttachTmux(tmux.name);
-      });
+        card.appendChild(header);
 
-      this.activeListEl.appendChild(card);
+        const meta = document.createElement("div");
+        meta.className = "session-card-meta";
+        const time = new Date(tmux.created);
+        const timeStr = time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        meta.textContent = `${tmux.windows} win · ${timeStr}`;
+        card.appendChild(meta);
+
+        card.addEventListener("click", () => {
+          this.callbacks.onAttachTmux(tmux.name);
+        });
+
+        this.activeListEl.appendChild(card);
+      }
     }
 
     const totalCount = this.sessions.length + unattachedTmux.length;

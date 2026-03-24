@@ -196,6 +196,13 @@
 
   .session-status { @apply shrink-0; }
   .session-status.alive { @apply text-tn-green; }
+  .session-section-label {
+    @apply px-3 py-1 text-[10px] text-tn-fg-dark font-medium uppercase tracking-wider;
+  }
+
+  .session-status.tmux-detached { @apply text-tn-fg-dark opacity-50; }
+  .tmux-detached-name { @apply opacity-60; }
+
   .session-close-menu {
     @apply fixed z-50 bg-tn-bg-dark border border-tn-bg-hl rounded shadow-lg overflow-hidden;
   }

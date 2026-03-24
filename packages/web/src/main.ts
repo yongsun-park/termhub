@@ -69,6 +69,7 @@ const sidePanel = new SidePanel(sidePanelEl, panelToggleBtn, {
   onSelectSession: (id) => switchSession(id),
   onCloseSession: (id, killTmux) => closeSession(id, killTmux),
   onAttachTmux: (name) => attachTmuxSession(name),
+  onKillTmux: (name) => killTmuxSession(name),
   onLaunchProject: (project) => launchProject(project),
   onTogglePin: (path, pinned) => togglePin(path, pinned),
 });
@@ -365,6 +366,23 @@ async function launchProject(project: ProjectInfo): Promise<void> {
     // continue with new session
   }
 
+  // Check for detached tmux session with matching name — auto-reattach
+  try {
+    const tmuxSessions = await api<TmuxSessionCardInfo[]>("/api/tmux-sessions");
+    const detached = tmuxSessions.find(
+      (t) => !t.termhubAttached && t.name.startsWith(project.name)
+    );
+    if (detached) {
+      if (isMobile()) sidePanel.close();
+      await attachTmuxSession(detached.name);
+      sidePanel.clearProjectState(project.path);
+      toastManager.show({ severity: "info", title: project.name, message: "Reattached to tmux session" });
+      return;
+    }
+  } catch {
+    // continue with new session
+  }
+
   if (isMobile()) sidePanel.close();
 
   try {
@@ -504,25 +522,35 @@ loginForm.addEventListener("submit", async (e) => {
   }
 });
 
+// --- Kill detached tmux session ---
+async function killTmuxSession(tmuxName: string): Promise<void> {
+  try {
+    await api(`/api/tmux-sessions/${tmuxName}`, { method: "DELETE" });
+    toastManager.show({ severity: "info", title: "tmux", message: `${tmuxName} killed` });
+  } catch {
+    toastManager.show({ severity: "warning", title: "tmux", message: "Failed to kill session" });
+  }
+  await new Promise((r) => setTimeout(r, 300));
+  refreshTmuxSessions();
+}
+
 // --- Session tool detection ---
 async function pollSessionTools(): Promise<void> {
   try {
     const sessions = await api<SessionCardInfo[]>("/api/sessions");
-    console.log("[poll] sessions:", sessions.length);
     for (const session of sessions) {
       if (!session.alive) continue;
       try {
         const status = await api<{ state: string; tool: string }>(`/api/sessions/${session.id}/status`);
-        console.log("[poll]", session.id, session.name, "→", status.tool, status.state);
         const tool = (status.tool || "shell") as "claude" | "codex" | "shell";
         tabBar.setToolState(session.id, tool);
         sidePanel.setToolState(session.id, tool);
-      } catch (err) {
-        console.error("[poll] status error:", session.id, err);
+      } catch {
+        // skip unreachable sessions
       }
     }
-  } catch (err) {
-    console.error("[poll] sessions error:", err);
+  } catch {
+    // non-critical
   }
 }
 
