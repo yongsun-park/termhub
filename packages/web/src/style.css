@@ -418,6 +418,54 @@
   .action-bar-copy:hover {
     @apply bg-tn-green/10 border-tn-green;
   }
+
+  .action-bar-template {
+    @apply bg-transparent text-tn-cyan border-tn-cyan/30;
+  }
+  .action-bar-template:hover {
+    @apply bg-tn-cyan/10 border-tn-cyan;
+  }
+
+  .action-bar-template-wrap {
+    @apply relative;
+  }
+
+  .template-dropdown {
+    @apply absolute top-full right-0 mt-1 w-56 bg-tn-bg-dark border border-tn-bg-hl rounded-lg shadow-lg z-50 overflow-hidden;
+  }
+
+  .template-filter {
+    @apply w-full px-2.5 py-1.5 bg-transparent border-b border-tn-bg-hl text-tn-fg-bright text-xs outline-none;
+    &::placeholder { @apply text-tn-fg-dark; }
+  }
+
+  .template-list {
+    @apply max-h-48 overflow-y-auto;
+  }
+
+  .template-item {
+    @apply flex flex-col gap-0 px-2.5 py-1.5 cursor-pointer;
+    transition: background 0.1s;
+    &:hover { @apply bg-tn-bg-hl; }
+  }
+
+  .template-item-name {
+    @apply text-xs text-tn-fg-bright font-medium;
+  }
+
+  .template-item-desc {
+    @apply text-[10px] text-tn-fg-muted truncate;
+  }
+
+  .template-empty {
+    @apply px-2.5 py-3 text-xs text-tn-fg-dark text-center;
+  }
+
+  .template-manage {
+    @apply px-2.5 py-2 text-[10px] text-tn-cyan text-center border-t border-tn-bg-hl cursor-pointer;
+    transition: background 0.1s;
+    &:hover { @apply bg-tn-bg-hl; }
+  }
 }
 
 /* ============================

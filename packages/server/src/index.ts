@@ -16,6 +16,7 @@ import { detectClaudeState } from "./claude-state.js";
 import { resolveSession, isResolveError } from "./resolve-session.js";
 import { listProjects } from "./projects.js";
 import { getFavorites, setFavorites } from "./favorites.js";
+import { listTemplates, getTemplate } from "./templates.js";
 
 const PORT = parseInt(process.env.PORT || "4000", 10);
 const app = express();
@@ -145,6 +146,34 @@ app.put("/api/favorites", authMiddleware, async (req, res) => {
   }
   await setFavorites(paths);
   res.json({ ok: true });
+});
+
+// --- Templates API ---
+app.get("/api/templates", authMiddleware, async (_req, res) => {
+  const templates = await listTemplates();
+  res.json(templates);
+});
+
+app.post("/api/sessions/:id/template/:name", authMiddleware, async (req, res) => {
+  const id = req.params.id;
+  const session = sessionManager.get(id);
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  if (!session.isAlive()) {
+    res.status(410).json({ error: "Session is dead" });
+    return;
+  }
+  const template = await getTemplate(req.params.name);
+  if (!template) {
+    res.status(404).json({ error: "Template not found" });
+    return;
+  }
+  session.write(template.content);
+  await new Promise((r) => setTimeout(r, 100));
+  session.write("\r");
+  res.json({ ok: true, template: template.name });
 });
 
 // --- Exec, Send & Stream API ---

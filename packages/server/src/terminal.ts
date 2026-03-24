@@ -1,4 +1,6 @@
 import * as pty from "node-pty";
+import { homedir } from "node:os";
+import path from "node:path";
 
 const OUTPUT_BUFFER_MAX = 100_000;
 
@@ -33,7 +35,8 @@ export class TerminalSession {
     this.id = id;
     this.name = name;
     this.createdAt = new Date();
-    this.initialCwd = options?.cwd || process.env.HOME || "/";
+    const rawCwd = options?.cwd || process.env.HOME || "/";
+    this.initialCwd = rawCwd.startsWith("~") ? path.join(homedir(), rawCwd.slice(1)) : rawCwd;
     this.tmuxSession = options?.tmuxSession;
 
     let command: string;

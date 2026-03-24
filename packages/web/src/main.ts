@@ -98,6 +98,29 @@ const actionBar = new ActionBar(terminalAreaEl, {
     if (!currentSessionId) return;
     closeSession(currentSessionId, true);
   },
+  onManageTemplates: async () => {
+    try {
+      await createSession({
+        cwd: "~/.termhub/templates",
+        name: "template-manager",
+        createTmux: tmuxAvailable,
+      });
+      toastManager.show({ severity: "info", title: "Templates", message: "Template manager opened — ask Claude to create/edit templates" });
+    } catch {
+      toastManager.show({ severity: "error", title: "Templates", message: "Failed to open template manager" });
+    }
+  },
+  onSendTemplate: async (templateName) => {
+    if (!currentSessionId) return;
+    try {
+      await api(`/api/sessions/${currentSessionId}/template/${templateName}`, {
+        method: "POST",
+      });
+      toastManager.show({ severity: "info", title: "Template", message: `${templateName} sent` });
+    } catch {
+      toastManager.show({ severity: "warning", title: "Template", message: "Failed to send template" });
+    }
+  },
 });
 
 // --- WebSocket ---
@@ -519,6 +542,16 @@ loginForm.addEventListener("submit", async (e) => {
   }
 });
 
+// --- Templates ---
+async function loadTemplates(): Promise<void> {
+  try {
+    const templates = await api<{ name: string; description?: string; content: string }[]>("/api/templates");
+    actionBar.setTemplates(templates);
+  } catch {
+    // non-critical
+  }
+}
+
 // --- Font size control ---
 const FONT_SIZE_KEY = "termhub_fontsize";
 const DEFAULT_FONT_SIZE = 16;
@@ -585,6 +618,7 @@ async function initApp(): Promise<void> {
 
   loadProjects();
   loadServerInfo();
+  loadTemplates();
   setupFontSizeControls();
 
   try {

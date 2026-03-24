@@ -1,5 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { homedir } from "node:os";
+import path from "node:path";
 
 const execFileAsync = promisify(execFile);
 
@@ -50,7 +52,10 @@ export async function isTmuxAvailable(): Promise<boolean> {
 
 export async function createTmuxSession(sessionName: string, cwd?: string): Promise<void> {
   const args = ["new-session", "-d", "-s", sessionName];
-  if (cwd) args.push("-c", cwd);
+  if (cwd) {
+    const resolved = cwd.startsWith("~") ? path.join(homedir(), cwd.slice(1)) : cwd;
+    args.push("-c", resolved);
+  }
   await execFileAsync("tmux", args);
 }
 
