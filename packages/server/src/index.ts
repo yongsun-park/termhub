@@ -80,6 +80,7 @@ app.post("/api/sessions", authMiddleware, async (req, res) => {
       cwd: actualTmuxSession ? undefined : cwd,
       tmuxSession: actualTmuxSession,
       command: typeof command === "string" ? command : undefined,
+      projectCwd: cwd,
     });
     res.status(201).json(session.getInfo());
   } catch (err) {

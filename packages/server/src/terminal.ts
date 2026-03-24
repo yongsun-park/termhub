@@ -26,6 +26,7 @@ export class TerminalSession {
   readonly createdAt: Date;
   readonly tmuxSession?: string;
   private readonly initialCwd: string;
+  private readonly projectCwd?: string;
   private ptyProcess: pty.IPty;
   private outputBuffer: string = "";
   private alive = true;
@@ -39,6 +40,10 @@ export class TerminalSession {
     const rawCwd = options?.cwd || process.env.HOME || "/";
     this.initialCwd = rawCwd.startsWith("~") ? path.join(homedir(), rawCwd.slice(1)) : rawCwd;
     this.tmuxSession = options?.tmuxSession;
+    if (options?.projectCwd) {
+      const raw = options.projectCwd;
+      this.projectCwd = raw.startsWith("~") ? path.join(homedir(), raw.slice(1)) : raw;
+    }
 
     let command: string;
     let args: string[];
@@ -128,7 +133,7 @@ export class TerminalSession {
       id: this.id,
       name: this.name,
       pid: this.ptyProcess.pid,
-      cwd: this.initialCwd,
+      cwd: this.projectCwd || this.initialCwd,
       createdAt: this.createdAt.toISOString(),
       alive: this.alive,
       tmuxSession: this.tmuxSession,
