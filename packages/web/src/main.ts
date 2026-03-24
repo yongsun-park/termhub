@@ -295,12 +295,7 @@ function updateActionBar(sessionId: string): void {
 }
 
 async function closeSession(id: string, killTmux = false): Promise<void> {
-  try {
-    const query = killTmux ? "?killTmux=true" : "";
-    await api(`/api/sessions/${id}${query}`, { method: "DELETE" });
-  } catch {
-    // Session may already be gone on server
-  }
+  // Immediately remove from UI (optimistic)
   const handle = terminalHandles.get(id);
   if (handle) {
     handle.dispose();
@@ -308,21 +303,28 @@ async function closeSession(id: string, killTmux = false): Promise<void> {
     terminalHandles.delete(id);
   }
   tabBar.removeTab(id);
-  // Small delay to let server process the deletion before refreshing
-  await new Promise((r) => setTimeout(r, 300));
-  refreshSidePanel();
-  refreshTmuxSessions();
+
+  // Switch to another tab if this was active
   if (currentSessionId === id) {
     currentSessionId = null;
-    try {
-      const sessions = await api<SessionInfo[]>("/api/sessions");
-      if (sessions.length > 0) {
-        switchSession(sessions[sessions.length - 1].id);
-      }
-    } catch {
-      // no tab to switch to
+    const remainingTabs = tabBar.getTabs();
+    if (remainingTabs.length > 0) {
+      switchSession(remainingTabs[remainingTabs.length - 1].id);
     }
   }
+
+  // Delete on server
+  try {
+    const query = killTmux ? "?killTmux=true" : "";
+    await api(`/api/sessions/${id}${query}`, { method: "DELETE" });
+  } catch {
+    // Session may already be gone on server
+  }
+
+  // Refresh lists after server processes
+  await new Promise((r) => setTimeout(r, 500));
+  refreshSidePanel();
+  refreshTmuxSessions();
 }
 
 // --- Project launcher ---

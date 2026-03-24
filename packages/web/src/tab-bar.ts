@@ -93,6 +93,10 @@ export class TabBar {
     return this.tabs.some((t) => t.id === sessionId);
   }
 
+  getTabs(): SessionInfo[] {
+    return [...this.tabs];
+  }
+
   setToolState(sessionId: string, tool: DetectedTool): void {
     this.toolStates.set(sessionId, tool);
     // Update dot color without full re-render
