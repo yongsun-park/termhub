@@ -54,6 +54,10 @@
   .tab.active { @apply bg-tn-bg text-tn-fg-bright; }
   .tab.dead .tab-name { @apply line-through opacity-50; }
 
+  .tab-tool-dot {
+    @apply text-[8px] leading-none;
+  }
+
   .tab-name {
     @apply max-w-[150px] overflow-hidden text-ellipsis;
   }
@@ -192,6 +196,9 @@
 
   .session-status { @apply shrink-0; }
   .session-status.alive { @apply text-tn-green; }
+  .session-status.tool-claude { @apply text-tn-blue; }
+  .session-status.tool-codex { @apply text-tn-yellow; }
+  .session-status.tool-shell { @apply text-tn-green; }
   .session-status.dead { @apply text-tn-fg-dark; }
 
   .session-card-name {

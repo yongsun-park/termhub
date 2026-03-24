@@ -502,6 +502,26 @@ loginForm.addEventListener("submit", async (e) => {
   }
 });
 
+// --- Session tool detection ---
+async function pollSessionTools(): Promise<void> {
+  try {
+    const sessions = await api<SessionCardInfo[]>("/api/sessions");
+    for (const session of sessions) {
+      if (!session.alive) continue;
+      try {
+        const status = await api<{ state: string; tool: string }>(`/api/sessions/${session.id}/status`);
+        const tool = (status.tool || "shell") as "claude" | "codex" | "shell";
+        tabBar.setToolState(session.id, tool);
+        sidePanel.setToolState(session.id, tool);
+      } catch {
+        // skip unreachable sessions
+      }
+    }
+  } catch {
+    // non-critical
+  }
+}
+
 // --- Templates ---
 async function loadTemplates(): Promise<void> {
   try {
@@ -603,6 +623,8 @@ async function initApp(): Promise<void> {
   refreshSidePanel();
   refreshTmuxSessions();
   setInterval(refreshTmuxSessions, 10_000);
+  pollSessionTools();
+  setInterval(pollSessionTools, 5_000);
 }
 
 // --- Boot ---

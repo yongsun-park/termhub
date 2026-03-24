@@ -1,4 +1,5 @@
 import { icon } from "./icons.js";
+import type { DetectedTool } from "./tab-bar.js";
 
 export interface SessionCardInfo {
   id: string;
@@ -54,6 +55,7 @@ export class SidePanel {
   private projects: ProjectInfo[] = [];
   private activeSessionId: string | null = null;
   private badges = new Map<string, { count: number; severity: string }>();
+  private toolStates = new Map<string, DetectedTool>();
   private projectStates = new Map<string, "launching" | "error">();
   private projectSectionState: "loading" | "error" | "ready" = "loading";
   private expandedProjects = new Set<string>();
@@ -275,6 +277,14 @@ export class SidePanel {
     this.renderActive();
   }
 
+  setToolState(sessionId: string, tool: DetectedTool): void {
+    const prev = this.toolStates.get(sessionId);
+    if (prev !== tool) {
+      this.toolStates.set(sessionId, tool);
+      this.renderActive();
+    }
+  }
+
   clearBadge(sessionId: string): void {
     if (this.badges.has(sessionId)) {
       this.badges.delete(sessionId);
@@ -424,9 +434,13 @@ export class SidePanel {
       const header = document.createElement("div");
       header.className = "session-card-header";
 
-      const statusIcon = icon(session.alive ? "circle-dot" : "circle", 12);
-      statusIcon.classList.add("session-status", session.alive ? "alive" : "dead");
-      header.appendChild(statusIcon);
+      const tool = this.toolStates.get(session.id) || "shell";
+      const toolIcon = !session.alive ? icon("circle", 12)
+        : tool === "claude" ? icon("sparkles", 12)
+        : tool === "codex" ? icon("zap", 12)
+        : icon("terminal", 12);
+      toolIcon.classList.add("session-status", session.alive ? `tool-${tool}` : "dead");
+      header.appendChild(toolIcon);
 
       const name = document.createElement("span");
       name.className = "session-card-name";

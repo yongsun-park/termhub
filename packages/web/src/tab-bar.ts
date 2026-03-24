@@ -1,3 +1,5 @@
+export type DetectedTool = "claude" | "codex" | "shell";
+
 export interface SessionInfo {
   id: string;
   name: string;
@@ -13,6 +15,12 @@ export interface TabBarCallbacks {
 
 type Severity = "error" | "warning" | "info";
 
+const TOOL_INDICATORS: Record<DetectedTool, { symbol: string; color: string }> = {
+  claude: { symbol: "●", color: "var(--color-tn-blue)" },
+  codex: { symbol: "●", color: "var(--color-tn-yellow)" },
+  shell: { symbol: "●", color: "var(--color-tn-fg-dark)" },
+};
+
 function severityRank(s: string): number {
   return s === "error" ? 3 : s === "warning" ? 2 : 1;
 }
@@ -23,6 +31,7 @@ export class TabBar {
   private activeId: string | null = null;
   private callbacks: TabBarCallbacks;
   private badges = new Map<string, { count: number; severity: Severity }>();
+  private toolStates = new Map<string, DetectedTool>();
 
   constructor(container: HTMLElement, callbacks: TabBarCallbacks) {
     this.container = container;
@@ -84,6 +93,14 @@ export class TabBar {
     return this.tabs.some((t) => t.id === sessionId);
   }
 
+  setToolState(sessionId: string, tool: DetectedTool): void {
+    const prev = this.toolStates.get(sessionId);
+    if (prev !== tool) {
+      this.toolStates.set(sessionId, tool);
+      this.render();
+    }
+  }
+
   private render(): void {
     // Preserve persistent elements
     const toggleBtn = this.container.querySelector("#panel-toggle");
@@ -97,9 +114,19 @@ export class TabBar {
       el.className = `tab${tab.id === this.activeId ? " active" : ""}${!tab.alive ? " dead" : ""}`;
       el.dataset.id = tab.id;
 
+      // Tool indicator
+      const tool = this.toolStates.get(tab.id) || "shell";
+      const indicator = TOOL_INDICATORS[tool];
+      const toolDot = document.createElement("span");
+      toolDot.className = "tab-tool-dot";
+      toolDot.textContent = indicator.symbol;
+      toolDot.style.color = indicator.color;
+      toolDot.title = tool;
+      el.appendChild(toolDot);
+
       const nameSpan = document.createElement("span");
       nameSpan.className = "tab-name";
-      nameSpan.textContent = tab.tmuxSession ? `[T] ${tab.name}` : tab.name;
+      nameSpan.textContent = tab.name;
       el.appendChild(nameSpan);
 
       // Badge (only for non-active tabs)
