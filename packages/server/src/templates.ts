@@ -43,7 +43,7 @@ export async function listTemplates(): Promise<PromptTemplate[]> {
     const templates: PromptTemplate[] = [];
 
     for (const file of files) {
-      if (!file.endsWith(".md")) continue;
+      if (!file.endsWith(".md") || file.toUpperCase() === "CLAUDE.MD") continue;
       try {
         const raw = await readFile(path.join(TEMPLATES_DIR, file), "utf-8");
         templates.push(parseTemplate(file, raw));
