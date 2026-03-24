@@ -332,6 +332,8 @@ async function launchProject(project: ProjectInfo): Promise<void> {
   if (sidePanel.isProjectLaunching(project.path)) return;
 
   sidePanel.setProjectLaunching(project.path);
+  // Safety: clear launching state after 10s max
+  const launchTimeout = setTimeout(() => sidePanel.clearProjectState(project.path), 10_000);
 
   // Check for existing session with same cwd
   try {
@@ -376,9 +378,14 @@ async function launchProject(project: ProjectInfo): Promise<void> {
     );
     if (detached) {
       if (isMobile()) sidePanel.close();
-      await attachTmuxSession(detached.name);
-      sidePanel.clearProjectState(project.path);
-      toastManager.show({ severity: "info", title: project.name, message: "Reattached to tmux session" });
+      try {
+        await attachTmuxSession(detached.name);
+        sidePanel.clearProjectState(project.path);
+        toastManager.show({ severity: "info", title: project.name, message: "Reattached to tmux session" });
+      } catch {
+        sidePanel.clearProjectState(project.path);
+        // tmux attach failed — fall through to create new session
+      }
       return;
     }
   } catch {
